@@ -1,27 +1,14 @@
 import "dotenv/config.js";
-import express from "express";
 import sql from "./db.js";
+import app from "./app.js";
 
-const app = express();
+import { getDatabaseTime } from "./services/timeService.js";
+
 const PORT = Number(process.env.PORT) || 3000;
-
-app.get("/health", (req, res) => {
-    res.json({ status: "ok"});
-});
-
-app.get("/time", async (req, res) => {
-    try {
-        const result = await sql`SELECT NOW()`;
-        res.json({time: result[0].now});
-    } catch (error) {
-        console.error("Failed to fetch time:", error);
-        res.status(500).json({ error: "Failed to fetch time" });
-    }
-});
 
 async function startServer() {
     try {
-        const result = await sql`SELECT NOW()`;
+        const result = await getDatabaseTime();
         console.log("Database connected:", result);
 
         app.listen(PORT, () => {
