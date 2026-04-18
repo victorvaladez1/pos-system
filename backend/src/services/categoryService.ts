@@ -24,3 +24,8 @@ export async function getCategoryRowByName(categoryName: string) {
     const result = await sql`SELECT * FROM categories WHERE name = ${categoryName} LIMIT 1`;
     return result;
 }
+
+export async function getCategoryRowById(categoryId: string) {
+    const result = await sql`SELECT * FROM categories WHERE id = ${categoryId} LIMIT 1`;
+    return result;
+}
