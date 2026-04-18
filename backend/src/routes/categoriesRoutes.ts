@@ -3,7 +3,8 @@ import {
     createCategory, 
     getAllCategories, 
     updateCategory, 
-    deleteCategory } from "../controllers/categoriesController.js"
+    deleteCategory 
+} from "../controllers/categoriesController.js"
 
 const router = Router();
 
