@@ -1,23 +1,16 @@
 import express from "express";
 
-import { getDatabaseTime } from "./services/timeService.js";
+import healthRoutes from "./routes/healthRoutes.js";
+import timeRoutes from "./routes/timeRoutes.js";
+import categoryRoutes from "./routes/categoriesRoutes.js";
 
 const app = express();
 
 app.use(express.json());
 
-app.get("/health", (req, res) => {
-    res.json({ status: "ok" });
-});
+app.use("/health", healthRoutes);
+app.use("/time", timeRoutes);
 
-app.get("/time", async (req, res) => {
-    try {
-        const time = await getDatabaseTime();
-        res.json({ time });
-    } catch (error) {
-        console.error("Failed to fetch time:", error);
-        res.status(500).json({ error: "Failed to fetch time" });
-    }
-});
+app.use("/categories", categoryRoutes);
 
 export default app;
