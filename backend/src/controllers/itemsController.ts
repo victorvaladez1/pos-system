@@ -1,9 +1,13 @@
 import {Request, Response} from "express";
 import { validate as isUuid } from "uuid";
 import { getCategoryRowById } from "../services/categoryService.js";
-import { 
+import {
     createItemRow,
-    getAllItemRows
+    createItemRowDesc,
+    createItemRowAct,
+    createItemRowDescAct,
+    getAllItemRows,
+    getItemRowByName
 } from "../services/itemsService.js";
 
 export async function createItem(req: Request, res: Response) {
@@ -13,6 +17,12 @@ export async function createItem(req: Request, res: Response) {
         return res.status(400).json({ error: "Enter valid name." });
     }
 
+    const existingItemRow = await getItemRowByName(name);
+
+    if (existingItemRow.length > 0) {
+        return res.status(409).json({ error: "Cannot create duplicate item."});
+    }
+ 
     if (!price_in_cents || typeof price_in_cents !== 'number' || price_in_cents < 0) {
         return res.status(400).json({ error: "Enter valid price_in_cents." });
     }
@@ -27,8 +37,18 @@ export async function createItem(req: Request, res: Response) {
         return res.status(400).json({ error: "Enter existing category_id."});
     }
 
-    const itemRow = await createItemRow(name, description, price_in_cents, category_id, is_active);
-    
+    if (!description && is_active !== null) {
+        const itemRow = await createItemRow(name, price_in_cents, category_id);
+        return res.status(201).json({ itemRow });
+    } else if (description) {
+        const itemRow = await createItemRowDesc(name, description, price_in_cents, category_id);
+        return res.status(201).json({ itemRow });
+    } else if (is_active !== null) {
+        const itemRow = await createItemRowAct(name, price_in_cents, category_id, is_active);
+        return res.status(201).json({ itemRow });
+    }
+
+    const itemRow = await createItemRowDescAct(name, description, price_in_cents, category_id, is_active);
     return res.status(201).json({ itemRow });
 }
 
