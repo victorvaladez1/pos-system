@@ -6,6 +6,7 @@ import categoryRoutes from "./routes/categoriesRoutes.js";
 import itemRoutes from "./routes/itemsRoutes.js";
 import modifierRoutes from "./routes/modifiersRoutes.js";
 import tableRoutes from "./routes/tablesRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
 
 const app = express();
 
@@ -18,5 +19,6 @@ app.use("/categories", categoryRoutes);
 app.use("/items", itemRoutes);
 app.use("/modifiers", modifierRoutes);
 app.use("/tables", tableRoutes);
+app.use("/orders", orderRoutes);
 
 export default app;
