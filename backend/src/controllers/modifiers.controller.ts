@@ -6,7 +6,7 @@ import {
     createModifierRow,
     updateModifierRowById,
     deleteModifierRowById
-} from "../services/modifiersService.js"
+} from "../services/modifiers.service.js"
 
 export async function createModifier(req: Request, res: Response) {
     const { name, price_in_cents } = req.body ?? {};

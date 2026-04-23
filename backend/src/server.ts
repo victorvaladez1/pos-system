@@ -2,7 +2,7 @@ import "dotenv/config.js";
 import sql from "./db.js";
 import app from "./app.js";
 
-import { getDatabaseTime } from "./services/timeService.js";
+import { getDatabaseTime } from "./services/time.service.js";
 
 const PORT = Number(process.env.PORT) || 3000;
 

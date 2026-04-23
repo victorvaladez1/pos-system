@@ -6,7 +6,7 @@ import {
     getTableRowByTableNumber,
     updateTableRowById,
     deleteTableRowById
-} from "../services/tableService.js";
+} from "../services/tables.service.js";
 
 export async function createTable(req: Request, res: Response) {
     const { table_number, capacity, current_status } = req.body ?? {};

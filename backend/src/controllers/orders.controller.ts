@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import {
     getOrderRows
-} from "../services/ordersService.js";
+} from "../services/orders.service.js";
 
 export const createOrder = (req: Request, res: Response) => {
     return res.json({ msg: "Create order entity."});
