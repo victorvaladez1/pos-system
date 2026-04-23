@@ -4,7 +4,7 @@ import {
     getTables,
     updateTable,
     deleteTable
-} from "../controllers/tablesController.js";
+} from "../controllers/tables.controller.js";
 
 const router = Router();
 

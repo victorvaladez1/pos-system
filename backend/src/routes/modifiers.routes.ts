@@ -4,7 +4,7 @@ import {
     getModifiers,
     updateModifier, 
     deleteModifier
-} from "../controllers/modifiersController.js"
+} from "../controllers/modifiers.controller.js"
 
 const router = Router();
 

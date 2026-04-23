@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getDatabaseTime } from "../services/timeService.js";
+import { getDatabaseTime } from "../services/time.service.js";
 
 export async function getTimeFromDB(req: Request, res: Response) {
     try {

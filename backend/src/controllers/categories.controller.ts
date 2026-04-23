@@ -6,7 +6,7 @@ import {
     deleteCategoryRowById,
     updateCategoryNameById,
     getCategoryRowByName
-} from "../services/categoryService.js";
+} from "../services/categories.service.js";
 
 export async function createCategory(req: Request, res: Response) {
     const { name } = req.body ?? {};

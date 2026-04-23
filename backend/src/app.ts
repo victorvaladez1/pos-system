@@ -1,11 +1,13 @@
 import express from "express";
 
-import healthRoutes from "./routes/healthRoutes.js";
-import timeRoutes from "./routes/timeRoutes.js";
-import categoryRoutes from "./routes/categoriesRoutes.js";
-import itemRoutes from "./routes/itemsRoutes.js";
-import modifierRoutes from "./routes/modifiersRoutes.js";
-import tableRoutes from "./routes/tablesRoutes.js";
+import healthRoutes from "./routes/health.routes.js";
+import timeRoutes from "./routes/time.routes.js";
+import categoryRoutes from "./routes/categories.routes.js";
+import itemRoutes from "./routes/items.routes.js";
+import modifierRoutes from "./routes/modifiers.routes.js";
+import tableRoutes from "./routes/tables.routes.js";
+import orderRoutes from "./routes/orders.routes.js";
+import userRoutes from "./routes/users.routes.js";
 
 const app = express();
 
@@ -18,5 +20,7 @@ app.use("/categories", categoryRoutes);
 app.use("/items", itemRoutes);
 app.use("/modifiers", modifierRoutes);
 app.use("/tables", tableRoutes);
+app.use("/orders", orderRoutes);
+app.use("/users", userRoutes);
 
 export default app;

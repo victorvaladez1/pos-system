@@ -1,6 +1,6 @@
 import {Request, Response} from "express";
 import { validate as isUuid } from "uuid";
-import { getCategoryRowById } from "../services/categoryService.js";
+import { getCategoryRowById } from "../services/categories.service.js";
 import {
     createItemRow,
     createItemRowDesc,
@@ -11,7 +11,7 @@ import {
     getItemRowByName,
     updateItemRowById,
     deleteItemRowById,
-} from "../services/itemsService.js";
+} from "../services/items.service.js";
 
 export async function createItem(req: Request, res: Response) {
     const { name, description, price_in_cents, category_id, is_active } = req.body || {};
