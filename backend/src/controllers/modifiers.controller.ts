@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { validate as isUuid } from "uuid";
+import type { Modifier, CreateModifierRequest, UpdateModifierRequest } from "../types/modifier.types.js";
 import {
     getModifierRows,
     getModifierRowByName,
@@ -15,22 +16,25 @@ export async function createModifier(req: Request, res: Response) {
         return res.status(400).json({ error: "Enter valid name."});
     }
 
-    if (!price_in_cents || typeof price_in_cents !== "number" || price_in_cents < 0) {
+    if (!price_in_cents || typeof price_in_cents !== "number" || !Number.isInteger(price_in_cents) || price_in_cents < 0) {
         return res.status(400).json({ error: "Enter valid price_in_cents" });
     }
 
-    const existingModifier = await getModifierRowByName(name);
-
-    if (existingModifier.length > 0) {
-        return res.status(400).json({ error: "Cannot create duplicate modifier." });
-    }
+    const newModifierValues: CreateModifierRequest = {
+        name,
+        price_in_cents
+    };
 
     try {
-        const modifier = await createModifierRow(name, price_in_cents);
+        const modifier = await createModifierRow(newModifierValues);
         return res.status(201).json({ modifier });
-    } catch (error) {
-        console.log("Failed to create modifier row in db.");
-        return res.status(500).json({ error: "Failed to create modifier row in db."});
+    } catch (error: any) {
+        if (error.code === "23505") {
+            return res.status(409).json({ error: "Modifier name already exists." });
+        }
+
+        console.error("Failed to create modifier.", error);
+        return res.status(500).json({ error: "Failed to create modifier." });
     }
 }
 

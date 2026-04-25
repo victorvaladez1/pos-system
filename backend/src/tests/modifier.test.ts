@@ -23,8 +23,8 @@ describe("Modifier API", () => {
             expect(response.body.modifier).toBeDefined();
             expect(response.body.modifier.name).toBe("Extra Cheese");
             expect(response.body.modifier.price_in_cents).toBe(150);
-            expect(response.body.created_at).toBeDefined();
-            expect(response.body.updated_at).toBeDefined(); 
+            expect(response.body.modifier.created_at).toBeDefined();
+            expect(response.body.modifier.updated_at).toBeDefined(); 
         });
 
         it ("should return 400 if name is missing", async () => {

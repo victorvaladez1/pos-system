@@ -1,4 +1,10 @@
 import sql from "../db.js";
+import type { Modifier, CreateModifierRequest, UpdateModifierRequest } from "../types/modifier.types.js";
+
+export async function createModifierRow(newModifierValues: CreateModifierRequest): Promise<Modifier> {
+    const result = await sql<Modifier[]> `INSERT INTO modifiers (name, price_in_cents) VALUES (${newModifierValues.name}, ${newModifierValues.price_in_cents}) RETURNING *`;
+    return result[0];
+}
 
 export async function getModifierRows() {
     const result = await sql `SELECT * FROM modifiers`;
@@ -7,11 +13,6 @@ export async function getModifierRows() {
 
 export async function getModifierRowByName(name: string) {
     const result = await sql `SELECT * FROM modifiers WHERE name = ${name} LIMIT 1`;
-    return result;
-}
-
-export async function createModifierRow(name: string, price_in_cents: number) {
-    const result = await sql `INSERT INTO modifiers (name, price_in_cents) VALUES (${name}, ${price_in_cents}) RETURNING id`;
     return result;
 }
 
