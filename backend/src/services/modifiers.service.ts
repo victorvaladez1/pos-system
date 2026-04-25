@@ -1,26 +1,27 @@
 import sql from "../db.js";
+import type { Modifier, CreateModifierRequest, UpdateModifierRequest } from "../types/modifier.types.js";
 
-export async function getModifierRows() {
-    const result = await sql `SELECT * FROM modifiers`;
-    return result;
-}
+export const createModifierRow = async (newModifierValues: CreateModifierRequest): Promise<Modifier> => {
+    const result = await sql<Modifier[]>`INSERT INTO modifiers (name, price_in_cents) VALUES (${newModifierValues.name}, ${newModifierValues.price_in_cents}) RETURNING *`;
+    return result[0];
+};
 
-export async function getModifierRowByName(name: string) {
-    const result = await sql `SELECT * FROM modifiers WHERE name = ${name} LIMIT 1`;
+export const getModifierRows = async (): Promise<Modifier[]> => {
+    const result = await sql<Modifier[]>`SELECT * FROM modifiers`;
     return result;
-}
+};
 
-export async function createModifierRow(name: string, price_in_cents: number) {
-    const result = await sql `INSERT INTO modifiers (name, price_in_cents) VALUES (${name}, ${price_in_cents}) RETURNING id`;
-    return result;
-}
+export const getModifierRowByName = async (name: string): Promise<Modifier> => {
+    const result = await sql<Modifier[]> `SELECT * FROM modifiers WHERE name = ${name} LIMIT 1`;
+    return result[0];
+};
 
-export async function updateModifierRowById(modifierId: string, name: string, price_in_cents: number) {
-    const result = await sql`UPDATE modifiers SET name = ${name}, price_in_cents = ${price_in_cents} WHERE id = ${modifierId} RETURNING id`;
-    return result;
-}
+export const updateModifierRowById = async (modifierId: string, fieldsToUpdate: UpdateModifierRequest): Promise<Modifier> => {
+    const result = await sql<Modifier[]>`UPDATE modifiers SET name = COALESCE(${fieldsToUpdate.name ?? null}, name), price_in_cents = COALESCE(${fieldsToUpdate.price_in_cents ?? null}, price_in_cents), updated_at = NOW() WHERE id = ${modifierId} RETURNING *`;
+    return result[0];
+};
 
-export async function deleteModifierRowById(modifierId: string) {
-    const result = await sql `DELETE FROM modifiers WHERE id = ${modifierId} RETURNING id`;
-    return result;
-}
+export const deleteModifierRowById = async (modifierId: string): Promise<Modifier | undefined> => {
+    const result = await sql<Modifier[]>`DELETE FROM modifiers WHERE id = ${modifierId} RETURNING *`;
+    return result[0];
+};

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { validate as isUuid } from "uuid";
+import type { Modifier, CreateModifierRequest, UpdateModifierRequest } from "../types/modifier.types.js";
 import {
     getModifierRows,
     getModifierRowByName,
@@ -8,33 +9,36 @@ import {
     deleteModifierRowById
 } from "../services/modifiers.service.js"
 
-export async function createModifier(req: Request, res: Response) {
+export const createModifier = async (req: Request, res: Response) => {
     const { name, price_in_cents } = req.body ?? {};
 
     if (!name || typeof name !== "string" || name.trim() == "") {
         return res.status(400).json({ error: "Enter valid name."});
     }
 
-    if (!price_in_cents || typeof price_in_cents !== "number" || price_in_cents < 0) {
+    if (!price_in_cents || typeof price_in_cents !== "number" || !Number.isInteger(price_in_cents) || price_in_cents < 0) {
         return res.status(400).json({ error: "Enter valid price_in_cents" });
     }
 
-    const existingModifier = await getModifierRowByName(name);
-
-    if (existingModifier.length > 0) {
-        return res.status(400).json({ error: "Cannot create duplicate modifier." });
-    }
+    const newModifierValues: CreateModifierRequest = {
+        name,
+        price_in_cents
+    };
 
     try {
-        const modifier = await createModifierRow(name, price_in_cents);
+        const modifier = await createModifierRow(newModifierValues);
         return res.status(201).json({ modifier });
-    } catch (error) {
-        console.log("Failed to create modifier row in db.");
-        return res.status(500).json({ error: "Failed to create modifier row in db."});
-    }
-}
+    } catch (error: any) {
+        if (error.code === "23505") {
+            return res.status(409).json({ error: "Modifier name already exists." });
+        }
 
-export async function getModifiers(req: Request, res: Response) {
+        console.error("Failed to create modifier.", error);
+        return res.status(500).json({ error: "Failed to create modifier." });
+    }
+};
+
+export const getModifiers = async (req: Request, res: Response) => {
     try {   
         const modifiers = await getModifierRows();
         return res.status(200).json({ modifiers });
@@ -42,51 +46,74 @@ export async function getModifiers(req: Request, res: Response) {
         console.log("Failed to return modifier rows from db.");
         return res.status(500).json({error : "Failed to return modifier rows from db."});
     }
-}
+};
 
 export async function updateModifier(req: Request, res: Response) {
-    const { id } = req.params ?? {};
-    const { name, price_in_cents } = req.body ?? {};
- 
-    if (!id || !isUuid(id) || Array.isArray(id)) {
-        return res.status(400).json({ error: "Enter valid modifier id." });
+    const { id } = req.params;
+
+    if (!isUuid(id) || Array.isArray(id)) {
+        return res.status(400).json({ error: "Id must be a valid UUID." });
     }
 
-    if (!name || typeof name !== "string" || name.trim() == "") {
-        return res.status(400).json({ error: "Enter valid name." });
+    const { name, price_in_cents }: UpdateModifierRequest = req.body ?? {};
+
+    if (name !== undefined && (typeof name !== "string" || name.trim() === "")) {
+        return res.status(400).json({ error: "Modifier name must be non-empty string." });
     }
 
-    if (!price_in_cents || typeof price_in_cents !== "number" || price_in_cents < 0) {
-        return res.status(400).json({ error: "Enter valid price_in_cents" });
+    if (price_in_cents !== undefined && (typeof price_in_cents !== "number" || !Number.isInteger(price_in_cents) || price_in_cents < 0)) {
+        return res.status(400).json({ error: "Price must be non-negative integer."});
     }
 
-    const existingModifier = await getModifierRowByName(name);
+    const fieldsToUpdate: UpdateModifierRequest = {};
 
-    if (existingModifier.length > 0) {
-        return res.status(400).json({ error: "Cannot create duplicate modifier" });
+    if (name !== undefined) {
+        fieldsToUpdate.name = name.trim();
+    }
+
+    if (price_in_cents !== undefined) {
+        fieldsToUpdate.price_in_cents = price_in_cents;
+    }
+
+    if (Object.keys(fieldsToUpdate).length == 0) {
+        return res.status(400).json({ error: "No valid fields provided to update." });
     }
 
     try {
-        const updatedModifier = await updateModifierRowById(id, name, price_in_cents);
-        return res.status(200).json({ updatedModifier });
-    } catch (error) {
-        console.log("Failed to update modifier row in db.", error);
-        return res.status(500).json({ error: "Failed to update modifier row in db."});
+        const updatedModifier = await updateModifierRowById(id, fieldsToUpdate);
+
+        if (!updatedModifier) {
+            return res.status(404).json({ error: "Category not found." });
+        }
+
+        return res.status(200).json({ modifier: updatedModifier });
+    } catch(error: any) {
+        if (error.code === "23505") {
+            return res.status(409).json({ error: "Modifier name already exists."});
+        }
+
+        console.error("Failed to update modifier.", error);
+        return res.status(500).json({ error: "Failed to update modifier." });
     }
-}
+};
 
 export async function deleteModifier(req: Request, res: Response) {
     const { id } = req.params ?? {};
 
     if (!id || !isUuid(id) || Array.isArray(id)) {
-        return res.status(400).json({ error: "Enter valid modifier id." });
+        return res.status(400).json({ error: "Id must be valid UUID." });
     }
 
     try {
         const deletedModifier = await deleteModifierRowById(id);
-        return res.status(200).json({ deletedModifier });
+
+        if (!deletedModifier) {
+            return res.status(404).json({ error: "Modifier not found." });
+        }
+
+        return res.sendStatus(204);
     } catch (error) {
-        console.log("Failed to delete modifier  row from db.", error);
-        return res.status(500).json({ error: "Failed to delete modifier row from db."})
+        console.log("Error deleting modifier.", error);
+        return res.status(500).json({ error: "Error deleting modifier." });
     }
-}
+};
