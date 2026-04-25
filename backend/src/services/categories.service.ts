@@ -7,8 +7,8 @@ export const createCategoryRow = async (newCategory: CreateCategoryRequest): Pro
     return result[0];
 };
 
-export async function getAllCategoryRows() {
-    const result = await sql`SELECT * FROM categories`;
+export const getAllCategoryRows = async (): Promise<Category[]> => {
+    const result = await sql<Category[]>`SELECT * FROM categories ORDER BY name ASC`;
     return result;
 };
 

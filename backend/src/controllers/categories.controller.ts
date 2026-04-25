@@ -22,7 +22,7 @@ export const createCategory = async (req: Request, res: Response) => {
 
     try {
         const category = await createCategoryRow(newCategoryFields);
-        
+
         return res.status(201).json({ category });
     } catch (error: any) {
         if (error.code === "23505") {
@@ -34,13 +34,13 @@ export const createCategory = async (req: Request, res: Response) => {
     }
 };
 
-export async function getAllCategories(req: Request, res: Response) {
+export const getAllCategories = async (req: Request, res: Response) => {
     try {
-        const categoryRows = await getAllCategoryRows();
-        res.json({ categoryRows });
+        const categories = await getAllCategoryRows();
+        return res.status(200).json({ categories });
     } catch (error) {
-        console.error("Failed to fetch category rows from db:", error);
-        res.status(500).json({ error: "Failed to fetch category rows from db." });
+        console.error("Error retrieving categories.", error);
+        return res.status(500).json({ error: "Error retrieving categories." });
     }
 }
 
