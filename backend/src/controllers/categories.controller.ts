@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
 import { validate as isUuid } from "uuid";
-import { CreateCategoryRequest } from "../types/category.types.js";
+import { CreateCategoryRequest, UpdateCategoryRequest } from "../types/category.types.js";
 import { 
     createCategoryRow,
     getAllCategoryRows,
-    updateCategoryNameById,
+    updateCategoryById,
     deleteCategoryRowById,
 } from "../services/categories.service.js";
 
@@ -44,25 +44,44 @@ export const getAllCategories = async (req: Request, res: Response) => {
 };
 
 export const updateCategory = async (req: Request, res: Response) => {
-    const { id } = req.params ?? {};
+    const { id } = req.params;
 
     if (!isUuid(id) || Array.isArray(id)) {
-        return res.status(400).json({ error: "Invalid UUID" });
+        return res.status(400).json({ error: "Id must be a valid UUID." });
     }
 
-    const { name } = req.body ?? {};
+    const { name }: UpdateCategoryRequest = req.body ?? {};
 
-    if (!name || typeof name !== "string" || name.trim() === "") {
-        return res.status(400).json({ error: "Category name is required." });
+    if (name !== undefined && (typeof name !== "string" || name.trim() == "")) {
+        return res.status(400).json({ error: "Category name must be non-empty string." });
+    }
+
+    const fieldsToUpdate: UpdateCategoryRequest = {};
+
+    if (name !== undefined) {
+        fieldsToUpdate.name = name.trim();
+    }
+
+    if (Object.keys(fieldsToUpdate).length === 0) {
+        return res.status(400).json({ error: "No valid fields provided to update." });
     }
 
     try {
-        const updatedRow = await updateCategoryNameById(id, name);
-        return res.json({ updatedRow });
-    } catch (error) {
-        console.error("Failed to update category row name column in db.");
-        res.status(500).json({ error: "Failed to update category row name column in db." });
-    }
+        const updatedCategory = await updateCategoryById(id, fieldsToUpdate);
+
+        if (!updatedCategory) {
+            return res.status(404).json({ error: "Category not found." });
+        }
+
+        return res.status(200).json({ category: updatedCategory });
+    } catch (error: any ) {
+        if (error.code === "23505") {
+            return res.status(409).json({ error: "Category name already exists." });
+        }
+
+        console.error("Failed to update category.", error);
+        return res.status(500).json({ error: "Failed to update category." });
+    } 
 };
 
 export const deleteCategory = async (req: Request, res: Response) => {

@@ -12,9 +12,10 @@ export const getAllCategoryRows = async (): Promise<Category[]> => {
     return result;
 };
 
-export const updateCategoryNameById = async (categoryId: string, categoryName: string) => {
-    const result = await sql`UPDATE categories SET name = ${categoryName} WHERE id = ${categoryId}`;
-    return result;
+export const updateCategoryById = async (categoryId: string, fieldsToUpdate: UpdateCategoryRequest): Promise<Category | undefined> => {
+    const result = await sql<Category[]>`UPDATE categories SET name = COALESCE(${fieldsToUpdate.name ?? null}, name), updated_at = NOW() WHERE id = ${categoryId} RETURNING *`;
+
+    return result[0];
 };
 
 export const deleteCategoryRowById = async (categoryId: string): Promise<Category | undefined> => {
