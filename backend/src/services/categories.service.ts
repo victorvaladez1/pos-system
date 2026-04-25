@@ -12,22 +12,12 @@ export const getAllCategoryRows = async (): Promise<Category[]> => {
     return result;
 };
 
-export async function updateCategoryNameById(categoryId: string, categoryName: string) {
+export const updateCategoryNameById = async (categoryId: string, categoryName: string) => {
     const result = await sql`UPDATE categories SET name = ${categoryName} WHERE id = ${categoryId}`;
     return result;
-}
+};
 
-export async function deleteCategoryRowById(categoryId: string) {
-    const result = await sql`DELETE FROM categories WHERE id = ${categoryId}`;
-    return result;
-}
-
-export async function getCategoryRowByName(categoryName: string) {
-    const result = await sql`SELECT * FROM categories WHERE name = ${categoryName} LIMIT 1`;
-    return result;
-}
-
-export async function getCategoryRowById(categoryId: string) {
-    const result = await sql`SELECT * FROM categories WHERE id = ${categoryId} LIMIT 1`;
-    return result;
-}
+export const deleteCategoryRowById = async (categoryId: string): Promise<Category | undefined> => {
+    const result = await sql<Category[]>`DELETE FROM categories WHERE id = ${categoryId} RETURNING *`;
+    return result[0];
+};

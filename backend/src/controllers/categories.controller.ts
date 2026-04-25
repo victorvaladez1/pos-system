@@ -4,9 +4,8 @@ import { CreateCategoryRequest } from "../types/category.types.js";
 import { 
     createCategoryRow,
     getAllCategoryRows,
-    deleteCategoryRowById,
     updateCategoryNameById,
-    getCategoryRowByName
+    deleteCategoryRowById,
 } from "../services/categories.service.js";
 
 export const createCategory = async (req: Request, res: Response) => {
@@ -42,9 +41,9 @@ export const getAllCategories = async (req: Request, res: Response) => {
         console.error("Error retrieving categories.", error);
         return res.status(500).json({ error: "Error retrieving categories." });
     }
-}
+};
 
-export async function updateCategory(req: Request, res: Response) {
+export const updateCategory = async (req: Request, res: Response) => {
     const { id } = req.params ?? {};
 
     if (!isUuid(id) || Array.isArray(id)) {
@@ -64,20 +63,25 @@ export async function updateCategory(req: Request, res: Response) {
         console.error("Failed to update category row name column in db.");
         res.status(500).json({ error: "Failed to update category row name column in db." });
     }
-}
+};
 
-export async function deleteCategory(req: Request, res: Response) {
-    const { id } = req.params ?? {};
+export const deleteCategory = async (req: Request, res: Response) => {
+    const { id } = req.params;
 
     if (!isUuid(id) || Array.isArray(id)) {
-        return res.status(400).json({ error: "Invalid UUID" });
+        return res.status(400).json({ error: "Id must be a valid UUID." });
     }
 
     try {
-        const deletedRow = await deleteCategoryRowById(id);
-        res.json({ deletedRow });
+        const deletedCategory = await deleteCategoryRowById(id);
+        
+        if (!deletedCategory) {
+            return res.status(404).json({ error: "Category not found." });
+        }
+
+        return res.status(204);
     } catch (error) {
-        console.error("Failed to delete category row from db:", error);
-        res.status(500).json({ error: "Failed to delete category row from db." });
+        console.error("Error deleting category.", error);
+        return res.status(500).json({ error: "Error deleting category." });
     }
-}
+};
