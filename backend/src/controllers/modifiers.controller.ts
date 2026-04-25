@@ -9,7 +9,7 @@ import {
     deleteModifierRowById
 } from "../services/modifiers.service.js"
 
-export async function createModifier(req: Request, res: Response) {
+export const createModifier = async (req: Request, res: Response) => {
     const { name, price_in_cents } = req.body ?? {};
 
     if (!name || typeof name !== "string" || name.trim() == "") {
@@ -36,9 +36,9 @@ export async function createModifier(req: Request, res: Response) {
         console.error("Failed to create modifier.", error);
         return res.status(500).json({ error: "Failed to create modifier." });
     }
-}
+};
 
-export async function getModifiers(req: Request, res: Response) {
+export const getModifiers = async (req: Request, res: Response) => {
     try {   
         const modifiers = await getModifierRows();
         return res.status(200).json({ modifiers });
@@ -46,7 +46,7 @@ export async function getModifiers(req: Request, res: Response) {
         console.log("Failed to return modifier rows from db.");
         return res.status(500).json({error : "Failed to return modifier rows from db."});
     }
-}
+};
 
 export async function updateModifier(req: Request, res: Response) {
     const { id } = req.params ?? {};
@@ -77,20 +77,25 @@ export async function updateModifier(req: Request, res: Response) {
         console.log("Failed to update modifier row in db.", error);
         return res.status(500).json({ error: "Failed to update modifier row in db."});
     }
-}
+};
 
 export async function deleteModifier(req: Request, res: Response) {
     const { id } = req.params ?? {};
 
     if (!id || !isUuid(id) || Array.isArray(id)) {
-        return res.status(400).json({ error: "Enter valid modifier id." });
+        return res.status(400).json({ error: "Id must be valid UUID." });
     }
 
     try {
         const deletedModifier = await deleteModifierRowById(id);
-        return res.status(200).json({ deletedModifier });
+
+        if (!deletedModifier) {
+            return res.status(404).json({ error: "Modifier not found." });
+        }
+
+        return res.sendStatus(204);
     } catch (error) {
-        console.log("Failed to delete modifier  row from db.", error);
-        return res.status(500).json({ error: "Failed to delete modifier row from db."})
+        console.log("Error deleting modifier.", error);
+        return res.status(500).json({ error: "Error deleting modifier." });
     }
-}
+};
