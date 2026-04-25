@@ -204,7 +204,7 @@ describe("Modifier API", () => {
             expect(updateResponse.body.modifier).toBeDefined();
             expect(updateResponse.body.modifier.id).toBe(modifierId);
             expect(updateResponse.body.modifier.name).toBe("Guacamole");
-            expect(updateResponse.body.modfifier.price_in_cents).toBe(200);
+            expect(updateResponse.body.modifier.price_in_cents).toBe(200);
         });
         
         it ("should return 400 if id is not valid UUID", async () => {
