@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { validate as isUuid } from "uuid";
+import { CreateCategoryRequest } from "../types/category.types.js";
 import { 
     createCategoryRow,
     getAllCategoryRows,
@@ -8,22 +9,30 @@ import {
     getCategoryRowByName
 } from "../services/categories.service.js";
 
-export async function createCategory(req: Request, res: Response) {
+export const createCategory = async (req: Request, res: Response) => {
     const { name } = req.body ?? {};
 
-    if (!name || typeof name !== "string" || name.trim() === "") {
-        return res.status(400).json({ error: "Category name is required." });
+    if (typeof name !== "string" || name.trim() === "") {
+        return res.status(400).json({ error: "Name must be a non-empty string." });
     }
 
-    const existingRow = await getCategoryRowByName(name);
+    const newCategoryFields: CreateCategoryRequest = {
+        name: name.trim()
+    };
 
-    if (existingRow.length > 0) {
-        return res.status(409).json({ error: "Cannot create duplicate category." });
+    try {
+        const category = await createCategoryRow(newCategoryFields);
+        
+        return res.status(201).json({ category });
+    } catch (error: any) {
+        if (error.code === "23505") {
+            return res.status(409).json({ error: "Category name already exists." });
+        }
+
+        console.error("Error creating category.", error);
+        return res.status(500).json({ error: "Error creating category." });
     }
-    
-    const categoryRow = await createCategoryRow(name);
-    return res.status(201).json({ categoryRow });
-}
+};
 
 export async function getAllCategories(req: Request, res: Response) {
     try {

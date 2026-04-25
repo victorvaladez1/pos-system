@@ -1,8 +1,10 @@
 import sql from "../db.js";
+import type { Category, CreateCategoryRequest, UpdateCategoryRequest } from "../types/category.types.js";
 
-export async function createCategoryRow(categoryName: string) {
-    const result = await sql`INSERT INTO categories (name) VALUES (${categoryName})`;
-    return result;
+export const createCategoryRow = async (newCategory: CreateCategoryRequest): Promise<Category> => {
+    const result = await sql<Category[]>`INSERT INTO categories (name) VALUES (${newCategory.name}) RETURNING *`;
+
+    return result[0];
 };
 
 export async function getAllCategoryRows() {
