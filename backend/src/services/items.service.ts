@@ -28,7 +28,7 @@ export async function updateItemRowById(itemId: string, name: string, descriptio
     return result;
 }
 
-export async function deleteItemRowById(itemId: string) {
-    const result = await sql`DELETE FROM items WHERE id = ${itemId}`;
-    return result;
-}
+export const deleteItemRowById = async (itemId: string): Promise<Item> => {
+    const result = await sql<Item[]>`DELETE FROM items WHERE id = ${itemId} RETURNING *`;
+    return result[0];
+};

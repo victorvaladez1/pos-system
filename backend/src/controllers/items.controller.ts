@@ -114,13 +114,24 @@ export async function updateItem(req: Request, res: Response) {
     return res.status(200).json({ itemRow });
 }
 
-export async function deleteItem(req: Request, res: Response) {
+export const deleteItem = async (req: Request, res: Response) => {
     const itemId = req.params.id ?? {};
 
     if (!itemId || !isUuid(itemId) || Array.isArray(itemId)) {
         return res.status(400).json({ error: "Item id is required." });
     }
     
-    const deletedRow = await deleteItemRowById(itemId);
-    return res.json({ deletedRow });
+    try {
+        const itemDeleted = await deleteItemRowById(itemId);
+
+        if (!itemDeleted) {
+            return res.status(404).json({ error: "Item not found" });
+        }
+
+        return res.sendStatus(204);
+    } catch (error: any) {
+        console.error("Failed to delete item.", error);
+        return res.status(500).json({ error: "Failed to delete item." });
+    }
+
 }
