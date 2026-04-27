@@ -222,7 +222,7 @@ describe("Item API", () => {
                 .send({
                     name: "Chicken Taco",
                     price_in_cents: 299,
-                    category: category.id
+                    category_id: category.id
                 });
 
             const response = await request(app)
