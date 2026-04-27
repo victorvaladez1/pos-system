@@ -13,20 +13,10 @@ export const getAllItemRows = async (): Promise<Item[]> => {
     return result;
 };
 
-export async function getItemRowById(itemId: string) {
-    const result = await sql`SELECT * FROM items WHERE id = ${itemId} LIMIT 1`;
-    return result;
-}
-
-export async function getItemRowByName(name: string) {
-    const result = await sql`SELECT * FROM items WHERE name = ${name} LIMIT 1`;
-    return result;
-}
-
-export async function updateItemRowById(itemId: string, name: string, description: string, price_in_cents: number, category_id: string, is_active: boolean) {
-    const result = await sql`UPDATE items SET name = ${name}, description = ${description}, price_in_cents = ${price_in_cents}, category_id = ${category_id}, is_active = ${is_active} WHERE id = ${itemId} RETURNING id`; 
-    return result;
-}
+export const updateItemRowById = async (itemId: string, fieldsToUpdate: UpdateItemRequest): Promise<Item | undefined> => {
+    const result = await sql<Item[]>`UPDATE items SET ${sql(fieldsToUpdate)}, updated_at = NOW() WHERE id = ${itemId} RETURNING *`;
+    return result[0];
+};
 
 export const deleteItemRowById = async (itemId: string): Promise<Item> => {
     const result = await sql<Item[]>`DELETE FROM items WHERE id = ${itemId} RETURNING *`;

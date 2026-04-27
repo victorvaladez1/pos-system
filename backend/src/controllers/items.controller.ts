@@ -5,8 +5,6 @@ import { getCategoryRowById } from "../services/categories.service.js";
 import {
     createItemRow,
     getAllItemRows,
-    getItemRowById,
-    getItemRowByName,
     updateItemRowById,
     deleteItemRowById,
 } from "../services/items.service.js";
@@ -70,49 +68,80 @@ export const getItems = async (req: Request, res: Response) => {
 }
 
 export async function updateItem(req: Request, res: Response) {
-    const itemId = req.params.id ?? {};
-    const { name, description, price_in_cents, category_id, is_active } = req.body ?? {};
+    const { id } = req.params;
+    const { name, description, price_in_cents, category_id, is_active } = req.body;
 
-    if (!itemId || !isUuid(itemId) || Array.isArray(itemId)) {
-        return res.status(400).json({ error: "Id is required."});
+    if (!id || typeof id !== 'string' || !isUuid(id) || Array.isArray(id)) {
+        return res.status(400).json({ error: "Id must be valid UUID."});
     }
 
-    const existingItem = await getItemRowById(itemId);
-
-    if (existingItem.length === 0) {
-        return res.status(400).json({ error: "Enter existing id." });
+    if (typeof name !== 'undefined' && (typeof name !== 'string' || name.trim() === '')) {
+        return res.status(400).json({ error: "Name must be non-empty string." });
     }
 
-    if (!name || typeof name !== 'string' || name.trim() == "") {
-        return res.status(400).json({ error: "Enter valid name." });
+    if (typeof description !== 'undefined' && description !== null && (typeof description !== 'string' || description.trim() === '')) {
+        return res.status(400).json({ error: "Description must be non-empty string." });
     }
 
-    if (!price_in_cents || typeof price_in_cents !== "number" || price_in_cents < 0) {
-        return res.status(400).json({ error: "Enter a valid price_in_cents." });
+    if (typeof price_in_cents !== 'undefined' && (typeof price_in_cents !== 'number' || !Number.isInteger(price_in_cents) || price_in_cents < 0)) {
+        return res.status(400).json({ error: "Price must be non-negative integer." });
     }
 
-    if (!isUuid(category_id) || Array.isArray(category_id)) {
-        return res.status(400).json({ error: "Category_id is required." });
+    if (typeof category_id !== 'undefined' && (typeof category_id !== 'string' || !isUuid(category_id) || Array.isArray(category_id))) {
+        return res.status(400).json({ error: "Id must be valid UUID."});
     }
 
-    const categoryRow =  await getCategoryRowById(category_id);
-
-    if (categoryRow.length === 0) {
-        return res.status(400).json({ error: "Enter existing category_id" });
+    if (typeof is_active !== 'undefined' && (typeof is_active !== 'boolean')) {
+        return res.status(400).json({ error: "Is_active must be boolean."});
     }
 
-    if (!description || typeof description !== "string" || description.trim() == "") {
-        return res.status(400).json({ error: "Enter valid description"});
+    const fieldsToUpdate: UpdateItemRequest = {};
+
+    if (name !== undefined) {
+        fieldsToUpdate.name = name.trim();
     }
 
-    if (typeof is_active !== 'boolean') {
-        return res.status(400).json({ error: "Enter valid is_active" });
+    if (description !== undefined) {
+        fieldsToUpdate.description = description === null ? null : description.trim();
     }
 
-    const itemRow = await updateItemRowById(itemId, name, description, price_in_cents, category_id, is_active);
+    if (price_in_cents !== undefined) {
+        fieldsToUpdate.price_in_cents = price_in_cents;
+    }
 
-    return res.status(200).json({ itemRow });
-}
+    if (category_id !== undefined) {
+        fieldsToUpdate.category_id = category_id;
+    }
+
+    if (is_active !== undefined) {
+        fieldsToUpdate.is_active = is_active;
+    }
+
+    if (Object.keys(fieldsToUpdate).length == 0) {
+        return res.status(400).json({ error: "No valid fields provided to update." });
+    }
+
+    try {
+        const item = await updateItemRowById(id, fieldsToUpdate);
+
+        if (!item) {
+            return res.status(404).json({ error: "Item not found." });
+        }
+
+        return res.status(200).json({ item });
+    } catch (error: any) {
+        if (error.code === "23505") {
+            return res.status(409).json({ error: "Item name already exists." });
+        }
+
+        if (error.code === "23503") {
+            return res.status(404).json({ error: "Category not found." });
+        }
+
+        console.error("Failed to update item", error);
+        return res.status(500).json({ error: "Failed to update item." });
+    }
+};
 
 export const deleteItem = async (req: Request, res: Response) => {
     const itemId = req.params.id ?? {};
@@ -133,5 +162,4 @@ export const deleteItem = async (req: Request, res: Response) => {
         console.error("Failed to delete item.", error);
         return res.status(500).json({ error: "Failed to delete item." });
     }
-
 }

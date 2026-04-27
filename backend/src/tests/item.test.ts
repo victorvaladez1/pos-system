@@ -289,7 +289,7 @@ describe("Item API", () => {
             expect(updateResponse.status).toBe(200);
             expect(updateResponse.body.item).toBeDefined();
             expect(updateResponse.body.item.id).toBe(itemId);
-            expect(updateResponse.body.item.decription).toBe("New description");
+            expect(updateResponse.body.item.description).toBe("New description");
         });
 
         it("should update an item description to null", async () => {
@@ -410,7 +410,7 @@ describe("Item API", () => {
                     name: "Chicken Taco",
                     description: "Old description",
                     price_in_cents: 299,
-                    category: category.id
+                    category_id: category.id
                 });
 
             const itemId = createResponse.body.item.id;
@@ -608,7 +608,7 @@ describe("Item API", () => {
             const fakeCategoryId = "00000000-0000-0000-0000-000000000000";
 
             const response = await request(app)
-                .patch(`/status/${itemId}`)
+                .patch(`/items/${itemId}`)
                 .send({
                     category_id: fakeCategoryId
                 });
