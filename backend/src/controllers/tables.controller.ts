@@ -40,7 +40,7 @@ export async function createTable(req: Request, res: Response) {
     }
 }
 
-export async function getTables(req: Request, res: Response) {
+export const getTables = async (req: Request, res: Response) => {
     try {
         const tables = await getTableRows();
         return res.status(200).json({ tables });

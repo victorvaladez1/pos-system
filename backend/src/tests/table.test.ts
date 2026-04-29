@@ -5,6 +5,9 @@ import sql from "../db.js";
 
 describe("Table API", () => {
     beforeEach(async () => {
+        await sql`DELETE FROM order_item_modifiers`;
+        await sql`DELETE FROM order_items`;
+        await sql`DELETE FROM payments`;
         await sql`DELETE FROM orders`;
         await sql`DELETE FROM tables`;
     });
@@ -140,7 +143,7 @@ describe("Table API", () => {
                 });
 
             await request(app)
-                .post("/table")
+                .post("/tables")
                 .send({
                     table_number: 2,
                     capacity: 6,
@@ -155,13 +158,13 @@ describe("Table API", () => {
             expect(response.body.tables.length).toBe(2);
         });
 
-        it ("should return an empty array if there are no tables", async () => {
+        it("should return an empty array if there are no tables", async () => {
             const response = await request(app).get("/tables");
 
             expect(response.status).toBe(200);
             expect(response.body.tables).toEqual([]);
         });
-    }); 
+    });
 
     describe("PATCH /tables/:id", () => {
         it ("should update a table number", async () => {

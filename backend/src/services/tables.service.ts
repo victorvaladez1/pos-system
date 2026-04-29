@@ -1,11 +1,13 @@
 import sql from "../db.js";
+import { Table, CreateTableRequest, UpdateTableRequest } from "../types/table.types.js";
 
 export async function createTableRow(table_number: number, capacity: number, current_status: string) {
     return await sql`INSERT INTO tables (table_number, capacity, current_status) VALUES (${table_number}, ${capacity}, ${current_status}) RETURNING id`;
 }
 
-export async function getTableRows() {
-    return await sql`SELECT * FROM tables`;
+export const getTableRows = async (): Promise<Table[]> => {
+    const result = await sql<Table[]>`SELECT * FROM tables ORDER BY table_number ASC`;
+    return result;
 }
 
 export async function getTableRowByTableNumber(table_number: number) {
