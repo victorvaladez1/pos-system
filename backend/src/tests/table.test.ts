@@ -5,6 +5,9 @@ import sql from "../db.js";
 
 describe("Table API", () => {
     beforeEach(async () => {
+        await sql`DELETE FROM order_item_modifiers`;
+        await sql`DELETE FROM order_items`;
+        await sql`DELETE FROM payments`;
         await sql`DELETE FROM orders`;
         await sql`DELETE FROM tables`;
     });
@@ -24,7 +27,7 @@ describe("Table API", () => {
             expect(response.body.table.id).toBeDefined();
             expect(response.body.table.table_number).toBe(1);
             expect(response.body.table.capacity).toBe(4);
-            expect(response.body.table.curent_status).toBe("available");
+            expect(response.body.table.current_status).toBe("available");
             expect(response.body.table.created_at).toBeDefined();
             expect(response.body.table.updated_at).toBeDefined();
         });
@@ -43,7 +46,7 @@ describe("Table API", () => {
 
         it ("should return 400 if table_number is not an integer", async () => {
             const response = await request(app)
-                .post("/table")
+                .post("/tables")
                 .send({
                     table_number: 1.5,
                     capacity: 4,
@@ -140,7 +143,7 @@ describe("Table API", () => {
                 });
 
             await request(app)
-                .post("/table")
+                .post("/tables")
                 .send({
                     table_number: 2,
                     capacity: 6,
@@ -155,13 +158,13 @@ describe("Table API", () => {
             expect(response.body.tables.length).toBe(2);
         });
 
-        it ("should return an empty array if there are no tables", async () => {
+        it("should return an empty array if there are no tables", async () => {
             const response = await request(app).get("/tables");
 
             expect(response.status).toBe(200);
             expect(response.body.tables).toEqual([]);
         });
-    }); 
+    });
 
     describe("PATCH /tables/:id", () => {
         it ("should update a table number", async () => {
@@ -238,7 +241,7 @@ describe("Table API", () => {
                     capacity: 0
                 });
 
-            expect(response.status).toBe(404);
+            expect(response.status).toBe(400);
             expect(response.body.error).toBeDefined();
         });
 

@@ -1,21 +1,22 @@
 import sql from "../db.js";
+import { Table, CreateTableRequest, UpdateTableRequest } from "../types/table.types.js";
 
-export async function createTableRow(table_number: number, capacity: number, current_status: string) {
-    return await sql`INSERT INTO tables (table_number, capacity, current_status) VALUES (${table_number}, ${capacity}, ${current_status}) RETURNING id`;
-}
+export const createTableRow = async (fields: CreateTableRequest): Promise<Table> => {
+    const result = await sql<Table[]>`INSERT INTO tables (table_number, capacity, current_status) VALUES (${fields.table_number}, ${fields.capacity}, ${fields.current_status}) RETURNING *`;
+    return result[0];
+};
 
-export async function getTableRows() {
-    return await sql`SELECT * FROM tables`;
-}
+export const getTableRows = async (): Promise<Table[]> => {
+    const result = await sql<Table[]>`SELECT * FROM tables ORDER BY table_number ASC`;
+    return result;
+};
 
-export async function getTableRowByTableNumber(table_number: number) {
-    return await sql`SELECT * FROM tables WHERE table_number = ${table_number} LIMIT 1`;
-}
+export const updateTableRowById = async (tableId: string, fieldsToUpdate: UpdateTableRequest): Promise<Table | undefined> => {
+    const result = await sql<Table[]>`UPDATE tables SET table_number = COALESCE(${fieldsToUpdate.table_number ?? null}, table_number), capacity = COALESCE(${fieldsToUpdate.capacity ?? null}, capacity), current_status = COALESCE(${fieldsToUpdate.current_status ?? null}, current_status), updated_at = NOW() WHERE id = ${tableId} RETURNING *`;
+    return result[0];
+};
 
-export async function updateTableRowById(tableId: string, table_number: number, capacity: number, current_status: string) {
-    return await sql`UPDATE tables SET table_number = ${table_number}, capacity = ${capacity}, current_status = ${current_status} WHERE id = ${tableId} RETURNING id`;
-}
-
-export async function deleteTableRowById(tableId: string) {
-    return await sql`DELETE FROM tables WHERE id = ${tableId} RETURNING id`;
-}
+export const deleteTableRowById = async (tableId: string): Promise<Table> => {
+    const result = await sql<Table[]>`DELETE FROM tables WHERE id = ${tableId} RETURNING *`;
+    return result[0];
+};
