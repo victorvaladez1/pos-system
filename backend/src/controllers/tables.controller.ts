@@ -84,16 +84,21 @@ export async function updateTable(req: Request, res: Response) {
     }
 }
 
-export async function deleteTable(req: Request, res: Response) {
+export const deleteTable = async (req: Request, res: Response) => {
     const { id } = req.params ?? {};
 
-    if (!id || !isUuid(id) || Array.isArray(id)) {
-        return res.status(400).json({ msg: "Enter valid id." });
+    if (id === undefined || typeof id !== "string" || !isUuid(id) || Array.isArray(id)) {
+        return res.status(400).json({ error: "Enter valid id." });
     }
 
     try {
         const deletedTable = await deleteTableRowById(id);
-        return res.status(200).json({ deletedTable });
+
+        if (!deletedTable) {
+            return res.status(404).json({ error: "Table not found." });
+        }
+
+        return res.sendStatus(204);
     } catch (error) {
         console.log("Failed to delete table row in db.", error);
         return res.status(500).json({ error: "Failed to delete table row in db." });
