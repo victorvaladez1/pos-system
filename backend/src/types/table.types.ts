@@ -21,7 +21,7 @@ export interface CreateTableRequest {
     current_status: TableStatus;
 }
 
-export interface UpdateTableRequest {
+ export interface UpdateTableRequest {
     table_number?: number;
     capacity?: number;
     current_status?: TableStatus;

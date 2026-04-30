@@ -27,7 +27,7 @@ describe("Table API", () => {
             expect(response.body.table.id).toBeDefined();
             expect(response.body.table.table_number).toBe(1);
             expect(response.body.table.capacity).toBe(4);
-            expect(response.body.table.curent_status).toBe("available");
+            expect(response.body.table.current_status).toBe("available");
             expect(response.body.table.created_at).toBeDefined();
             expect(response.body.table.updated_at).toBeDefined();
         });
@@ -46,7 +46,7 @@ describe("Table API", () => {
 
         it ("should return 400 if table_number is not an integer", async () => {
             const response = await request(app)
-                .post("/table")
+                .post("/tables")
                 .send({
                     table_number: 1.5,
                     capacity: 4,
