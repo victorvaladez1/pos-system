@@ -11,9 +11,10 @@ export const getTableRows = async (): Promise<Table[]> => {
     return result;
 };
 
-export async function updateTableRowById(tableId: string, table_number: number, capacity: number, current_status: string) {
-    return await sql`UPDATE tables SET table_number = ${table_number}, capacity = ${capacity}, current_status = ${current_status} WHERE id = ${tableId} RETURNING id`;
-}
+export const updateTableRowById = async (tableId: string, fieldsToUpdate: UpdateTableRequest): Promise<Table | undefined> => {
+    const result = await sql<Table[]>`UPDATE tables SET table_number = COALESCE(${fieldsToUpdate.table_number ?? null}, table_number), capacity = COALESCE(${fieldsToUpdate.capacity ?? null}, capacity), current_status = COALESCE(${fieldsToUpdate.current_status ?? null}, current_status), updated_at = NOW() WHERE id = ${tableId} RETURNING *`;
+    return result[0];
+};
 
 export const deleteTableRowById = async (tableId: string): Promise<Table> => {
     const result = await sql<Table[]>`DELETE FROM tables WHERE id = ${tableId} RETURNING *`;

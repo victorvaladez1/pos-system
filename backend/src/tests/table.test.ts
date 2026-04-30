@@ -241,7 +241,7 @@ describe("Table API", () => {
                     capacity: 0
                 });
 
-            expect(response.status).toBe(404);
+            expect(response.status).toBe(400);
             expect(response.body.error).toBeDefined();
         });
 
