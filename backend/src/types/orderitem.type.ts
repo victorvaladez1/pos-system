@@ -28,8 +28,6 @@ export interface CreateOrderItemRequest {
 }
 
 export interface UpdateOrderItemRequest {
-    order_id?: string;
-    item_id?: string;
     quantity?: number;
     unit_price_in_cents?: number;
     notes?: string | null;
