@@ -5,7 +5,8 @@ import type { CreateOrderRequest } from "../types/order.types.js";
 import { isOrderType, isOrderStatus } from "../types/order.types.js";
 import {
     createOrderRow,
-    getOrderRows
+    getOrderRows,
+    deleteOrderRowById
 } from "../services/orders.service.js";
 
 export const createOrder = async (req: Request, res: Response) => {
@@ -91,6 +92,22 @@ export const updateOrder = (req: Request, res: Response) => {
     return res.json({ msg: "Update order entity by id."});
 };
 
-export const deleteOrder = (req: Request, res: Response) => {
-    return res.json({ msg: "Delete order entity by id."})
+export const deleteOrder = async (req: Request, res: Response) => {
+    const { id } = req.params ?? {};
+
+    if (id === undefined || typeof id !== 'string' || !isUuid(id) || Array.isArray(id)) {
+        return res.status(400).json({ error: "Id must be valid UUID."});
+    }
+
+    try {
+        const order = await deleteOrderRowById(id);
+        if (!order) {
+            return res.status(404).json({ error: "Order not found."});
+        }
+        
+        return res.sendStatus(204);
+    } catch (error: any) {
+        console.error("Failed to delete order", error);
+        return res.status(500).json({ error: "Failed to delete order." });
+    }
 };

@@ -14,3 +14,8 @@ export const getOrderRows = async (): Promise<Order[]> => {
     const result = await sql<Order[]>`SELECT * FROM orders ORDER BY created_at DESC`;
     return result;
 };
+
+export const deleteOrderRowById = async (id: string): Promise<Order | undefined> => {
+    const result = await sql<Order[]>`DELETE FROM orders WHERE id = ${id} RETURNING *`
+    return result[0];
+};
