@@ -15,6 +15,11 @@ export const getOrderRows = async (): Promise<Order[]> => {
     return result;
 };
 
+export const updateOrderRowById = async (id: string, fieldsToUpdate: UpdateOrderRequest): Promise<Order | undefined> => {
+    const result = await sql<Order[]>`UPDATE orders SET ${sql(fieldsToUpdate)}, updated_at = NOW() WHERE id = ${id} RETURNING *`;
+    return result[0];
+};
+
 export const deleteOrderRowById = async (id: string): Promise<Order | undefined> => {
     const result = await sql<Order[]>`DELETE FROM orders WHERE id = ${id} RETURNING *`
     return result[0];
