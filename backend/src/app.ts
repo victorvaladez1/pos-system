@@ -8,6 +8,7 @@ import modifierRoutes from "./routes/modifiers.routes.js";
 import tableRoutes from "./routes/tables.routes.js";
 import orderRoutes from "./routes/orders.routes.js";
 import userRoutes from "./routes/users.routes.js";
+import orderItemRoutes from "./routes/orderItems.routes.js";
 
 const app = express();
 
@@ -22,5 +23,6 @@ app.use("/modifiers", modifierRoutes);
 app.use("/tables", tableRoutes);
 app.use("/orders", orderRoutes);
 app.use("/users", userRoutes);
+app.use("/order-items", orderItemRoutes);
 
 export default app;
