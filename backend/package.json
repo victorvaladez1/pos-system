@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node dist/server.js",
     "build": "tsc",
-    "test": "vitest run --exclude dist/** --no-file-parallelism"
+    "test": "vitest run tests --no-file-parallelism"
   },
   "keywords": [],
   "author": "",
