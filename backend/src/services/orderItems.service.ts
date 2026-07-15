@@ -3,7 +3,7 @@ import {
     OrderItem,
     CreateOrderItemRequest,
     UpdateOrderItemRequest
-} from "../types/orderitem.type.js"
+} from "../types/orderitem.types.js"
 
 export const createOrderItemRow = async (fields: CreateOrderItemRequest): Promise<OrderItem> => {
     const result = await sql<OrderItem[]>`INSERT INTO order_items (order_id, item_id, quantity, unit_price_in_cents, notes, order_item_status) 

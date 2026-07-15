@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { validate as isUuid } from "uuid";
-import { CreateOrderItemRequest, isOrderItemStatus, UpdateOrderItemRequest } from "../types/orderitem.type.js";
+import { CreateOrderItemRequest, isOrderItemStatus, UpdateOrderItemRequest } from "../types/orderitem.types.js";
 import {
     createOrderItemRow,
     getOrderItemRows,
