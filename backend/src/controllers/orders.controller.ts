@@ -7,7 +7,8 @@ import {
     createOrderRow,
     getOrderRows,
     updateOrderRowById,
-    deleteOrderRowById
+    deleteOrderRowById,
+    closeOrderRowById
 } from "../services/orders.service.js";
 import { getOrderSummarybyId } from "../services/orderSummary.service.js";
 
@@ -225,5 +226,38 @@ export const getOrderSummary = async (req: Request, res: Response) => {
     } catch (error) {
         console.error("Failed to retrieve order summary.", error);
         return res.status(500).json({ error: "Falield to retrieve order summary." });
+    }
+};
+
+export const closeOrder = async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    if (!id || typeof id !== "string" || !isUuid(id) || Array.isArray(id)) {
+        return res.status(400).json({ error: "Order id must be a valid UUID." });
+    }
+
+    try {
+        const summary = await getOrderSummarybyId(id);
+
+        if (!summary) {
+            return res.status(404).json({ error: "Order not found." });
+        }
+
+        if (summary.totals.balance_due_in_cents > 0) {
+            return res.status(400).json({
+                error: "Order cannot be closed with remaining balance."
+            });
+        }
+
+        const order = await closeOrderRowById(id);
+
+        if (!order) {
+            return res.status(404).json({ error: "Order not found." });
+        }
+
+        return res.status(200).json({ order });
+    } catch (error) {
+        console.error("Failed to close order.", error);
+        return res.status(500).json({ error: "Faild to close order." });
     }
 };

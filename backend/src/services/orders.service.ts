@@ -24,3 +24,17 @@ export const deleteOrderRowById = async (id: string): Promise<Order | undefined>
     const result = await sql<Order[]>`DELETE FROM orders WHERE id = ${id} RETURNING *`
     return result[0];
 };
+
+export const closeOrderRowById = async (orderId: string): Promise<Order | undefined> => {
+    const result = await sql<Order[]>`
+        UPDATE orders 
+        SET 
+            order_status = 'paid',
+            closed_at = NOW(),
+            updated_at = NOW()
+        WHERE id = ${orderId}
+        RETURNING *
+    `;
+
+    return result[0];
+};
