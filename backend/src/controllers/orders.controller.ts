@@ -9,6 +9,7 @@ import {
     updateOrderRowById,
     deleteOrderRowById
 } from "../services/orders.service.js";
+import { getOrderSummarybyId } from "../services/orderSummary.service.js";
 
 export const createOrder = async (req: Request, res: Response) => {
     const { table_id, server_id, order_type, order_status, ticket_name, guest_count, opened_at } = req.body ?? {};
@@ -203,5 +204,26 @@ export const deleteOrder = async (req: Request, res: Response) => {
     } catch (error: any) {
         console.error("Failed to delete order", error);
         return res.status(500).json({ error: "Failed to delete order." });
+    }
+};
+
+export const getOrderSummary = async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    if (!id || typeof id !== "string" || !isUuid(id) || Array.isArray(id)) {
+        return res.status(400).json({ error: "Order id must be a valid UUID." });
+    }
+
+    try {
+        const summary = await getOrderSummarybyId(id);
+
+        if (!summary) {
+            return res.status(404).json({ error: "Order not found." });
+        }
+
+        return res.status(200).json(summary);
+    } catch (error) {
+        console.error("Failed to retrieve order summary.", error);
+        return res.status(500).json({ error: "Falield to retrieve order summary." });
     }
 };

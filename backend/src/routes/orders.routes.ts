@@ -3,11 +3,13 @@ import {
     createOrder,
     getOrders,
     updateOrder,
-    deleteOrder
+    deleteOrder,
+    getOrderSummary
 } from "../controllers/orders.controller.js"
 
 const router = Router();
 
+router.get("/:id/summary", getOrderSummary);
 router.post("/", createOrder);
 router.get("/", getOrders);
 router.patch("/:id", updateOrder);
