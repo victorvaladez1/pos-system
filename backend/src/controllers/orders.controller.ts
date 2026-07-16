@@ -9,7 +9,8 @@ import {
     updateOrderRowById,
     deleteOrderRowById,
     closeOrderRowById,
-    getOpenOrderRows
+    getOpenOrderRows,
+    cancelOrderRowById
 } from "../services/orders.service.js";
 import { getOrderSummarybyId } from "../services/orderSummary.service.js";
 
@@ -272,4 +273,44 @@ export const getOpenOrders = async (_req: Request, res: Response) => {
         console.error("Failed to retrieve open orders.", error);
         return res.status(500).json({ error: "Failed to retrieve open orders." });
     }
-}
+};
+
+export const cancelOrder = async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    if (!id || typeof id !== "string" || !isUuid(id) || Array.isArray(id)) {
+        return res.status(400).json({ error: "Order id must be valid UUID." });
+    }
+
+    try {
+        const summary = await getOrderSummarybyId(id);
+
+        if (!summary) {
+            return res.status(404).json({ error: "Order not found." });
+        }
+
+        if (summary.order.order_status === "paid") {
+            return res.status(400).json({
+                error: "Paid order cannot be cancelled."
+            });
+        }
+
+        if (summary.order.order_status === "cancelled") {
+            return res.status(400).json({
+                error: "Order is already cancelled."
+            });
+        }
+
+        const order = await cancelOrderRowById(id);
+
+        if (!order) {
+            return res.status(404).json({ error: "Order not found" });
+        }
+
+        return res.status(200).json({ order });
+    } catch (error) {
+        console.error("Failed to cancel order.", error);
+        return res.status(500).json({ error: "Faild to cancel order." });
+    }
+
+};  

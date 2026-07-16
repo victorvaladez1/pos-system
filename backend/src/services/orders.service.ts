@@ -49,3 +49,17 @@ export const getOpenOrderRows = async (): Promise<Order[]> => {
 
     return result;
 };
+
+export const cancelOrderRowById = async (orderId: string): Promise<Order | undefined> => {
+    const result = await sql<Order[]>`
+        UPDATE orders
+        SET
+            order_status = 'cancelled',
+            closed_at = NOW(),
+            updated_at = NOW()
+        WHERE id = ${orderId}
+        RETURNING *
+    `;
+
+    return result[0];
+};
