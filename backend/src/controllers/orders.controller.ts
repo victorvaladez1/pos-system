@@ -8,7 +8,8 @@ import {
     getOrderRows,
     updateOrderRowById,
     deleteOrderRowById,
-    closeOrderRowById
+    closeOrderRowById,
+    getOpenOrderRows
 } from "../services/orders.service.js";
 import { getOrderSummarybyId } from "../services/orderSummary.service.js";
 
@@ -261,3 +262,14 @@ export const closeOrder = async (req: Request, res: Response) => {
         return res.status(500).json({ error: "Faild to close order." });
     }
 };
+
+export const getOpenOrders = async (_req: Request, res: Response) => {
+    try {
+        const orders = await getOpenOrderRows();
+
+        return res.status(200).json({ orders });
+    } catch (error) {
+        console.error("Failed to retrieve open orders.", error);
+        return res.status(500).json({ error: "Failed to retrieve open orders." });
+    }
+}

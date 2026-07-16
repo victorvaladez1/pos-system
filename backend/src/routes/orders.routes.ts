@@ -5,11 +5,13 @@ import {
     updateOrder,
     deleteOrder,
     getOrderSummary,
-    closeOrder
+    closeOrder,
+    getOpenOrders
 } from "../controllers/orders.controller.js"
 
 const router = Router();
 
+router.get("/open", getOpenOrders);
 router.patch("/:id/close", closeOrder);
 router.get("/:id/summary", getOrderSummary);
 router.post("/", createOrder);

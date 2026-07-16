@@ -38,3 +38,14 @@ export const closeOrderRowById = async (orderId: string): Promise<Order | undefi
 
     return result[0];
 };
+
+export const getOpenOrderRows = async (): Promise<Order[]> => {
+    const result = await sql<Order[]>`
+        SELECT *
+        FROM orders
+        WHERE order_status = 'open'
+        ORDER BY opened_at DESC
+    `;
+
+    return result;
+};
