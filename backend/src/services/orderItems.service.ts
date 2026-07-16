@@ -2,7 +2,8 @@ import sql from "../db.js";
 import { 
     OrderItem,
     CreateOrderItemRequest,
-    UpdateOrderItemRequest
+    UpdateOrderItemRequest,
+    OrderItemStatus
 } from "../types/orderitem.types.js"
 
 export const createOrderItemRow = async (fields: CreateOrderItemRequest): Promise<OrderItem> => {
@@ -32,3 +33,19 @@ export const deleteOrderItemRowById = async (
 
     return result[0];
 }
+
+export const updateOrderItemStatusById = async (
+    orderItemId: string,
+    orderItemStatus: OrderItemStatus
+) : Promise<OrderItem | undefined> => {
+    const result = await sql<OrderItem[]>`
+        UPDATE order_items
+        SET 
+            order_item_status = ${orderItemStatus},
+            updated_at = NOW()
+        WHERE id = ${orderItemId}
+        RETURNING *
+    `;
+
+    return result[0];
+};
