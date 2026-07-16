@@ -280,6 +280,10 @@ export const closeOrder = async (req: Request, res: Response) => {
             return res.status(404).json({ error: "Order not found." });
         }
 
+        if (order.order_type === "dine_in" && order.table_id) {
+            await updateTableStatusById(order.table_id, "dirty");
+        }
+
         return res.status(200).json({ order });
     } catch (error) {
         console.error("Failed to close order.", error);
@@ -330,6 +334,10 @@ export const cancelOrder = async (req: Request, res: Response) => {
             return res.status(404).json({ error: "Order not found" });
         }
 
+        if (order.order_type === "dine_in" && order.table_id) {
+            await updateTableStatusById(order.table_id, "dirty");
+        }
+ 
         return res.status(200).json({ order });
     } catch (error) {
         console.error("Failed to cancel order.", error);
