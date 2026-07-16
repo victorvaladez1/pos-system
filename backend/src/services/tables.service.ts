@@ -1,5 +1,5 @@
 import sql from "../db.js";
-import { Table, CreateTableRequest, UpdateTableRequest } from "../types/table.types.js";
+import { Table, CreateTableRequest, UpdateTableRequest, TableStatus } from "../types/table.types.js";
 
 export const createTableRow = async (fields: CreateTableRequest): Promise<Table> => {
     const result = await sql<Table[]>`INSERT INTO tables (table_number, capacity, current_status) VALUES (${fields.table_number}, ${fields.capacity}, ${fields.current_status}) RETURNING *`;
@@ -18,5 +18,21 @@ export const updateTableRowById = async (tableId: string, fieldsToUpdate: Update
 
 export const deleteTableRowById = async (tableId: string): Promise<Table> => {
     const result = await sql<Table[]>`DELETE FROM tables WHERE id = ${tableId} RETURNING *`;
+    return result[0];
+};
+
+export const updateTableStatusById = async (
+    tableId: string,
+    currentStatus: TableStatus
+): Promise<Table | undefined> => {
+    const result = await sql<Table[]>`
+        UPDATE tables
+        SET
+            current_status = ${currentStatus},
+            updated_at = NOW()
+        WHERE id = ${tableId}
+        RETURNING *
+    `;
+
     return result[0];
 };
