@@ -36,3 +36,13 @@ export const updateTableStatusById = async (
 
     return result[0];
 };
+
+export const getTableRowById = async (tableId: string): Promise<Table | undefined> => {
+    const result = await sql<Table[]>`
+        SELECT *
+        FROM tables
+        WHERE id = ${tableId}
+    `;
+
+    return result[0];
+};
