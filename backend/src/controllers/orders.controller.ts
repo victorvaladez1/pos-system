@@ -11,13 +11,14 @@ import {
     closeOrderRowById,
     getOpenOrderRows,
     cancelOrderRowById,
+    getOpenOrderRowByTableId
 } from "../services/orders.service.js";
 
 import { getOrderSummarybyId } from "../services/orderSummary.service.js";
 
 import {
     getTableRowById,
-    updateTableStatusById
+    updateTableStatusById,
 } from "../services/tables.service.js";
 
 export const createOrder = async (req: Request, res: Response) => {
@@ -343,5 +344,4 @@ export const cancelOrder = async (req: Request, res: Response) => {
         console.error("Failed to cancel order.", error);
         return res.status(500).json({ error: "Faild to cancel order." });
     }
-
 };  

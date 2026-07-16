@@ -7,8 +7,11 @@ import {
     getTableRows,
     updateTableRowById,
     deleteTableRowById,
-    updateTableStatusById
+    updateTableStatusById,
+    getTableRowById,
 } from "../services/tables.service.js";
+
+import { getOpenOrderRowByTableId } from "../services/orders.service.js";
 
 export const createTable = async (req: Request, res: Response) => {
     const { table_number, capacity, current_status } = req.body ?? {};
@@ -156,3 +159,29 @@ export const updateTableStatus = async (req: Request, res: Response) => {
     }
 };
 
+export const getTableOpenOrder = async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    if (!id || typeof id !== "string" || !isUuid(id) || Array.isArray(id)) {
+        return res.status(400).json({ error: "Table id must be a valid UUID." });
+    }
+
+    try {
+        const table = await getTableRowById(id);
+
+        if (!table) {
+            return res.status(404).json({ error: "Table not found." });
+        }
+
+        const order = await getOpenOrderRowByTableId(id);
+
+        if (!order) {
+            return res.status(404).json({ error: "Open order not found for table." });
+        }
+
+        return res.status(200).json({ order });
+    } catch (error) {
+        console.error("Failed to retrieve table open order.", error);
+        return res.status(500).json({ error: "Failed to retrieve open order."});
+    }
+};
