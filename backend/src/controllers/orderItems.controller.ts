@@ -5,8 +5,11 @@ import {
     createOrderItemRow,
     getOrderItemRows,
     updateOrderItemRowById,
-    deleteOrderItemRowById
+    deleteOrderItemRowById,
+    updateOrderItemStatusById
 } from "../services/orderItems.service.js";
+
+import { orderItemStatusEnum, type OrderItemStatus } from "../types/orderitem.types.js";
 
 export const createOrderItem = async (req: Request, res: Response) => {
     const { order_id, item_id, quantity, unit_price_in_cents, notes, order_item_status } = req.body ?? {};
@@ -163,5 +166,33 @@ export const deleteOrderItem = async (req: Request, res: Response) => {
         console.error("Failed to delete order item.", error);
         return res.status(500).json({ error: "Failed to delete order item." });
     }
+};
 
+export const updateOrderItemStatus = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { order_item_status } = req.body;
+
+    if (!id || typeof id !== "string" || !isUuid(id) || Array.isArray(id)) {
+        return res.status(400).json({ error: "Order item id must be a valid UUID." });
+    }
+
+    if (!order_item_status ||
+        typeof order_item_status !== "string" ||
+        !orderItemStatusEnum.includes(order_item_status as OrderItemStatus)
+    ) {
+        return res.status(400).json({ error: "Order item status must be valid." });
+    }
+
+    try {
+        const orderItem = await updateOrderItemStatusById(id, order_item_status as OrderItemStatus);
+
+        if (!orderItem) {
+            return res.status(404).json({ error: "Order item not found." });
+        }
+
+        return res.status(200).json({ orderItem });
+    } catch (error) {
+        console.error("Failed to update order item status.", error);
+        return res.status(500).json({ error: "Failed to update order item status." });
+    }
 };
