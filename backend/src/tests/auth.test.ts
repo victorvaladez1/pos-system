@@ -18,24 +18,43 @@ describe("Auth API", () => {
 
     const createTestUser = async (
         passcodeHash = "1234",
-        isActive = true
+        isActive = true,
+        firstName = "Test",
+        userRole = "server"
     ) => {
-        const response = await request(app)
-            .post("/users")
-            .send({
-                first_name: "Test",
-                middle_name: null,
-                last_name: "User",
-                user_role: "server",
-                passcode_hash: passcodeHash,
-                is_active: isActive
-            });
+        const result = await sql`
+            INSERT INTO users (
+                first_name,
+                middle_name,
+                last_name,
+                user_role,
+                passcode_hash,
+                is_active
+            )
+            VALUES (
+                ${firstName},
+                ${null},
+                ${"User"},
+                ${userRole}::user_role_enum,
+                ${passcodeHash},
+                ${isActive}
+            )
+            RETURNING
+                id,
+                first_name,
+                middle_name,
+                last_name,
+                user_role,
+                is_active,
+                created_at,
+                updated_at
+        `;
 
-        return response.body.user;
+        return result[0];
     };
 
     describe("POST /auth/passcode-login", () => {
-        it("should login an active user with matching passcode", async () => {
+        it("should login an active user with matching passcode and return a token", async () => {
             const user = await createTestUser("1234", true);
 
             const response = await request(app)
@@ -51,6 +70,9 @@ describe("Auth API", () => {
             expect(response.body.user.last_name).toBe("User");
             expect(response.body.user.user_role).toBe("server");
             expect(response.body.user.is_active).toBe(true);
+
+            expect(response.body.token).toBeDefined();
+            expect(typeof response.body.token).toBe("string");
         });
 
         it("should not return passcode_hash", async () => {
@@ -64,6 +86,7 @@ describe("Auth API", () => {
 
             expect(response.status).toBe(200);
             expect(response.body.user.passcode_hash).toBeUndefined();
+            expect(response.body.token).toBeDefined();
         });
 
         it("should return 400 if passcode is missing", async () => {
@@ -124,20 +147,14 @@ describe("Auth API", () => {
         });
 
         it("should login the active user if inactive user has same passcode", async () => {
-            await createTestUser("1234", false);
+            await createTestUser("1234", false, "Inactive", "server");
 
-            const activeUserResponse = await request(app)
-                .post("/users")
-                .send({
-                    first_name: "Active",
-                    middle_name: null,
-                    last_name: "User",
-                    user_role: "cashier",
-                    passcode_hash: "1234",
-                    is_active: true
-                });
-
-            const activeUser = activeUserResponse.body.user;
+            const activeUser = await createTestUser(
+                "1234",
+                true,
+                "Active",
+                "cashier"
+            );
 
             const response = await request(app)
                 .post("/auth/passcode-login")
@@ -149,6 +166,9 @@ describe("Auth API", () => {
             expect(response.body.user.id).toBe(activeUser.id);
             expect(response.body.user.first_name).toBe("Active");
             expect(response.body.user.user_role).toBe("cashier");
+
+            expect(response.body.token).toBeDefined();
+            expect(typeof response.body.token).toBe("string");
         });
     });
 });
