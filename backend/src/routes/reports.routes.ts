@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getDailySales, getPaymentMethods, getTopItems } from "../controllers/reports.controller.js";
+import { getDailySales, getPaymentMethods, getTopItems, getOpenBalances } from "../controllers/reports.controller.js";
 import { requireUser } from "../middleware/requireUser.js";
 import { requireRole } from "../middleware/requireRole.js";
 
@@ -13,5 +13,6 @@ const requireReportRole = [
 router.get("/daily-sales", requireReportRole, getDailySales);
 router.get("/payment-methods", requireReportRole, getPaymentMethods);
 router.get("/top-items", requireReportRole, getTopItems);
+router.get("/open-balances", requireReportRole, getOpenBalances);
 
 export default router;

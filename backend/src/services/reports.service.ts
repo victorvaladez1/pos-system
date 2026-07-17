@@ -1,5 +1,5 @@
 import sql from "../db.js";
-import type { DailySalesReport, PaymentMethodReport, TopItemReport } from "../types/report.types.js";
+import type { DailySalesReport, PaymentMethodReport, TopItemReport, OpenBalanceReport } from "../types/report.types.js";
 
 interface DailySalesReportRow {
     date: string;
@@ -18,6 +18,16 @@ interface TopItemReportRow {
     item_name: string;
     quantity_sold: number;
     gross_sales_in_cents: number;
+}
+
+interface OpenBalanceReportRow {
+    order_id: string;
+    ticket_name: string | null;
+    order_type: string;
+    order_status: string;
+    subtotal_in_cents: number;
+    payments_total_in_cents: number;
+    balance_due_in_cents: number;
 }
 
 export const getDailySalesReport = async(): Promise<DailySalesReport> => {
@@ -72,3 +82,44 @@ export const getTopItemsReport = async (): Promise<TopItemReport[]> => {
 
     return result;
 };
+
+export const getOpenBalancesReport = async (): Promise<OpenBalanceReport[]> => {
+    const result = await sql<OpenBalanceReportRow[]>`
+        SELECT
+            o.id AS order_id,
+            o.ticket_name,
+            o.order_type,
+            o.order_status,
+            COALESCE(item_totals.subtotal_in_cents, 0)::int AS subtotal_in_cents,
+            COALESCE(payment_totals.payments_total_in_cents, 0)::int AS payments_total_in_cents,
+            (
+                COALESCE(item_totals.subtotal_in_cents, 0)
+                - COALESCE(payment_totals.payments_total_in_cents, 0)
+            )::int AS balance_due_in_cents
+        FROM orders o
+        LEFT JOIN (
+            SELECT 
+                order_id,
+                SUM(quantity * unit_price_in_cents)::int AS subtotal_in_cents
+            FROM order_items
+            WHERE order_item_status != 'voided'
+            GROUP BY order_id
+        ) item_totals ON item_totals.order_id = o.id
+        LEFT JOIN (
+            SELECT 
+                order_id,
+                SUM(amount_in_cents)::int AS payments_total_in_cents
+            FROM payments
+            WHERE payment_status = 'completed'
+            GROUP BY order_id
+        ) payment_totals ON payment_totals.order_id = o.id
+        WHERE o.order_status IN ('open', 'submitted')
+            AND (
+                COALESCE(item_totals.subtotal_in_cents, 0)
+                - COALESCE(payment_totals.payments_total_in_cents, 0)
+        ) > 0
+        ORDER BY balance_due_in_cents DESC
+    `;
+
+    return result;
+};  
