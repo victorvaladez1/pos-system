@@ -51,6 +51,19 @@ const seedDemoUsers = async () => {
     try {
         console.log("Seeding demo users...");
 
+        await sql`
+            DELETE FROM users
+            WHERE first_name IN (
+                'Admin',
+                'Manager',
+                'Cashier',
+                'Kitchen',
+                'Server',
+                'Host'
+            )
+            AND last_name = 'User'
+        `;
+
         for (const user of demoUsers) {
             const hashedPasscode = await hashPasscode(user.passcode);
 
