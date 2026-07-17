@@ -2,6 +2,7 @@ import request from "supertest";
 import { describe, it, expect, beforeEach } from "vitest";
 import app from "../app.js";
 import sql from "../db.js";
+import { hashPasscode } from "../utils/passcode.js";
 
 describe("Auth API", () => {
     beforeEach(async () => {
@@ -17,11 +18,13 @@ describe("Auth API", () => {
     });
 
     const createTestUser = async (
-        passcodeHash = "1234",
+        passcode = "1234",
         isActive = true,
         firstName = "Test",
         userRole = "server"
     ) => {
+        const hashedPasscode = await hashPasscode(passcode);
+
         const result = await sql`
             INSERT INTO users (
                 first_name,
@@ -36,7 +39,7 @@ describe("Auth API", () => {
                 ${null},
                 ${"User"},
                 ${userRole}::user_role_enum,
-                ${passcodeHash},
+                ${hashedPasscode},
                 ${isActive}
             )
             RETURNING

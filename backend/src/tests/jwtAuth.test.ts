@@ -2,6 +2,7 @@ import request from "supertest";
 import { describe, it, expect, beforeEach } from "vitest";
 import app from "../app.js";
 import sql from "../db.js";
+import { hashPasscode } from "../utils/passcode.js";
 
 describe("JWT authentication", () => {
     beforeEach(async () => {
@@ -21,6 +22,8 @@ describe("JWT authentication", () => {
         passcode = "2345",
         isActive = true
     ) => {
+        const hashedPasscode = await hashPasscode(passcode);
+
         const result = await sql`
             INSERT INTO users (
                 first_name,
@@ -35,7 +38,7 @@ describe("JWT authentication", () => {
                 ${null},
                 ${"User"},
                 ${userRole}::user_role_enum,
-                ${passcode},
+                ${hashedPasscode},
                 ${isActive}
             )
             RETURNING

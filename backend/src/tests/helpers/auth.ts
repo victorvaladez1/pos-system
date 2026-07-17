@@ -1,6 +1,7 @@
 import request from "supertest";
 import app from "../../app.js";
 import sql from "../../db.js";
+import { hashPasscode } from "../../utils/passcode.js";
 
 export type TestUserRole =
     | "cashier"
@@ -30,6 +31,8 @@ export const createTestUserWithRole = async (
     isActive = true,
     passcode = `${userRole}-passcode`
 ): Promise<TestUserWithPasscode> => {
+    const hashedPasscode = await hashPasscode(passcode);
+
     const result = await sql<TestUser[]>`
         INSERT INTO users (
             first_name,
@@ -44,7 +47,7 @@ export const createTestUserWithRole = async (
             ${null},
             ${userRole},
             ${userRole}::user_role_enum,
-            ${passcode},
+            ${hashedPasscode},
             ${isActive}
         )
         RETURNING
