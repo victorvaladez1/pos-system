@@ -1,5 +1,5 @@
 import sql from "../db.js";
-import type { DailySalesReport, PaymentMethodReport } from "../types/report.types.js";
+import type { DailySalesReport, PaymentMethodReport, TopItemReport } from "../types/report.types.js";
 
 interface DailySalesReportRow {
     date: string;
@@ -11,6 +11,13 @@ interface PaymentMethodReportRow {
     payment_method: string;
     gross_sales_in_cents: number;
     payment_count: number;
+}
+
+interface TopItemReportRow {
+    item_id: string;
+    item_name: string;
+    quantity_sold: number;
+    gross_sales_in_cents: number;
 }
 
 export const getDailySalesReport = async(): Promise<DailySalesReport> => {
@@ -44,6 +51,23 @@ export const getPaymentMethodReports = async (): Promise<PaymentMethodReport[]> 
         WHERE payment_status = 'completed'
         GROUP BY payment_method
         ORDER BY gross_sales_in_cents DESC
+    `;
+
+    return result;
+};
+
+export const getTopItemsReport = async (): Promise<TopItemReport[]> => {
+    const result = await sql<TopItemReportRow[]>`
+        SELECT
+            i.id AS item_id,
+            i.name AS item_name,
+            SUM(oi.quantity)::int AS quantity_sold,
+            SUM(oi.quantity * oi.unit_price_in_cents)::int AS gross_sales_in_cents
+        FROM order_items oi
+        JOIN items i ON i.id = oi.item_id
+        WHERE oi.order_item_status != 'voided'
+        GROUP BY i.id, i.name
+        ORDER BY quantity_sold DESC, gross_sales_in_cents DESC
     `;
 
     return result;

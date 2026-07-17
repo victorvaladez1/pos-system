@@ -9,3 +9,10 @@ export interface PaymentMethodReport {
     gross_sales_in_cents: number;
     payment_count: number;
 }
+
+export interface TopItemReport {
+    item_id: string;
+    item_name: string;
+    quantity_sold: number;
+    gross_sales_in_cents: number;
+}
