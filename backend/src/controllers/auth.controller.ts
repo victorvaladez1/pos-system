@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { getActiveUserByPasscode } from "../services/auth.service.js";
 import { signAuthToken } from "../utils/jwt.js";
+import { toPublicUser } from "../types/user.types.js";
 
 export const passcodeLogin = async (req: Request, res: Response) => {
     try {
@@ -23,4 +24,16 @@ export const passcodeLogin = async (req: Request, res: Response) => {
         console.error("Failed to login with passcode.", error);
         return res.status(500).json({ error: "Failed to login with passcode." });
     }
+};
+
+export const getCurrentUser = async (_req: Request, res: Response) => {
+    const user = res.locals.user;
+
+    if (!user) {
+        return res.status(401).json({ error: "Authentication is required." });
+    }
+
+    return res.status(200).json({
+        user: toPublicUser(user)
+    });
 };

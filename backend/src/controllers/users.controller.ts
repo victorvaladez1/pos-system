@@ -14,6 +14,7 @@ import {
     updateUserRowById,
     deactivateUserRowById
 } from "../services/users.service.js";
+import { hashPasscode } from "../utils/passcode.js";
 
 export const createUser = async (req: Request, res: Response) => {
     const {
@@ -76,19 +77,21 @@ export const createUser = async (req: Request, res: Response) => {
         return res.status(400).json({ error: "Is active must be a boolean." });
     }
 
-    const fields: CreateUserRequest = {
-        first_name: first_name.trim(),
-        middle_name: middle_name === undefined || middle_name === null ? null : middle_name.trim(),
-        last_name: last_name.trim(),
-        user_role,
-        passcode_hash: passcode_hash.trim()
-    };
-
-    if (is_active !== undefined) {
-        fields.is_active = is_active;
-    }
-
     try {
+        const hashedPasscode = await hashPasscode(passcode_hash.trim());
+
+        const fields: CreateUserRequest = {
+            first_name: first_name.trim(),
+            middle_name: middle_name === undefined || middle_name === null ? null : middle_name.trim(),
+            last_name: last_name.trim(),
+            user_role,
+            passcode_hash: hashedPasscode
+        };
+
+        if (is_active !== undefined) {
+            fields.is_active = is_active;
+        }
+
         const user = await createUserRow(fields);
         return res.status(201).json({ user: toPublicUser(user) });
     } catch (error) {
@@ -181,37 +184,37 @@ export const updateUser = async (req: Request, res: Response) => {
         return res.status(400).json({ error: "Is active must be a boolean." });
     }
 
-    const fieldsToUpdate: UpdateUserRequest = {};
-
-    if (first_name !== undefined) {
-        fieldsToUpdate.first_name = first_name.trim();
-    }
-
-    if (middle_name !== undefined) {
-        fieldsToUpdate.middle_name = middle_name === null ? null : middle_name.trim();
-    }
-
-    if (last_name !== undefined) {
-        fieldsToUpdate.last_name = last_name.trim();
-    }
-
-    if (user_role !== undefined) {
-        fieldsToUpdate.user_role = user_role;
-    }
-
-    if (passcode_hash !== undefined) {
-        fieldsToUpdate.passcode_hash = passcode_hash.trim();
-    }
-
-    if (is_active !== undefined) {
-        fieldsToUpdate.is_active = is_active;
-    }
-
-    if (Object.keys(fieldsToUpdate).length === 0) {
-        return res.status(400).json({ error: "No valid fields provided to update." });
-    }
-
     try {
+        const fieldsToUpdate: UpdateUserRequest = {};
+
+        if (first_name !== undefined) {
+            fieldsToUpdate.first_name = first_name.trim();
+        }
+
+        if (middle_name !== undefined) {
+            fieldsToUpdate.middle_name = middle_name === null ? null : middle_name.trim();
+        }
+
+        if (last_name !== undefined) {
+            fieldsToUpdate.last_name = last_name.trim();
+        }
+
+        if (user_role !== undefined) {
+            fieldsToUpdate.user_role = user_role;
+        }
+
+        if (passcode_hash !== undefined) {
+            fieldsToUpdate.passcode_hash = await hashPasscode(passcode_hash.trim());
+        }
+
+        if (is_active !== undefined) {
+            fieldsToUpdate.is_active = is_active;
+        }
+
+        if (Object.keys(fieldsToUpdate).length === 0) {
+            return res.status(400).json({ error: "No valid fields provided to update." });
+        }
+
         const user = await updateUserRowById(id, fieldsToUpdate);
 
         if (!user) {

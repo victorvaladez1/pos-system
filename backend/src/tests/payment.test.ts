@@ -2,55 +2,27 @@ import request from "supertest";
 import { describe, it, expect, beforeEach } from "vitest";
 import app from "../app.js";
 import sql from "../db.js";
+import {
+    createAdminHeader,
+    createCashierHeader,
+    createJwtHeaderForRole,
+    createManagerHeader,
+    createTestUserWithRole
+} from "./helpers/auth.js";
+import { signAuthToken } from "../utils/jwt.js";
 
-const createTestUser = async (
-        userRole: string,
-        isActive = true,
-        firstName = "Test"
-    ) => {
-        const result = await sql`
-            INSERT INTO users (
-                first_name,
-                middle_name,
-                last_name,
-                user_role,
-                passcode_hash,
-                is_active
-            )
-            VALUES (
-                ${firstName},
-                ${null},
-                ${"User"},
-                ${userRole}::user_role_enum,
-                ${`${userRole}-1234`},
-                ${isActive}
-            )
-            RETURNING
-                id,
-                first_name,
-                middle_name,
-                last_name,
-                user_role,
-                is_active,
-                created_at,
-                updated_at
-        `;
+const createTestOrder = async () => {
+    const response = await request(app)
+        .post("/orders")
+        .send({
+            order_type: "takeout",
+            order_status: "open",
+            ticket_name: "Victor",
+            guest_count: 1
+        });
 
-        return result[0];
-    };
-
-    const createTestOrder = async () => {
-        const response = await request(app)
-            .post("/orders")
-            .send({
-                order_type: "takeout",
-                order_status: "open",
-                ticket_name: "Victor",
-                guest_count: 1
-            });
-
-        return response.body.order;
-    };
+    return response.body.order;
+};
 
 describe("Payment API", () => {
     beforeEach(async () => {
@@ -58,26 +30,20 @@ describe("Payment API", () => {
         await sql`DELETE FROM payments`;
         await sql`DELETE FROM order_items`;
         await sql`DELETE FROM orders`;
+        await sql`DELETE FROM users`;
         await sql`DELETE FROM items`;
         await sql`DELETE FROM modifiers`;
         await sql`DELETE FROM categories`;
         await sql`DELETE FROM tables`;
     });
 
-    const createCashierUser = async () => {
-        return createTestUser("cashier");
-    };
-
-
-
     const createTestPayment = async () => {
         const order = await createTestOrder();
-
-        const cashier = await createCashierUser();
+        const authHeader = await createCashierHeader();
 
         const response = await request(app)
             .post("/payments")
-            .set("x-user-id", cashier.id)
+            .set(authHeader)
             .send({
                 order_id: order.id,
                 amount_in_cents: 1299,
@@ -91,12 +57,11 @@ describe("Payment API", () => {
     describe("POST /payments", () => {
         it("should create a payment", async () => {
             const order = await createTestOrder();
-
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
 
             const response = await request(app)
                 .post("/payments")
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     order_id: order.id,
                     amount_in_cents: 1299,
@@ -117,12 +82,11 @@ describe("Payment API", () => {
 
         it("should create a payment with zero amount", async () => {
             const order = await createTestOrder();
-            
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
 
             const response = await request(app)
                 .post("/payments")
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     order_id: order.id,
                     amount_in_cents: 0,
@@ -138,10 +102,11 @@ describe("Payment API", () => {
         });
 
         it("should return 400 if order_id is missing", async () => {
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .post("/payments")
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     amount_in_cents: 1299,
                     payment_method: "card",
@@ -153,10 +118,11 @@ describe("Payment API", () => {
         });
 
         it("should return 400 if order_id is not a valid UUID", async () => {
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .post("/payments")
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     order_id: "not-a-valid-id",
                     amount_in_cents: 1299,
@@ -170,10 +136,11 @@ describe("Payment API", () => {
 
         it("should return 404 if order_id does not exist", async () => {
             const fakeOrderId = "00000000-0000-0000-0000-000000000000";
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .post("/payments")
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     order_id: fakeOrderId,
                     amount_in_cents: 1299,
@@ -187,10 +154,11 @@ describe("Payment API", () => {
 
         it("should return 400 if amount_in_cents is missing", async () => {
             const order = await createTestOrder();
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .post("/payments")
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     order_id: order.id,
                     payment_method: "card",
@@ -203,10 +171,11 @@ describe("Payment API", () => {
 
         it("should return 400 if amount_in_cents is negative", async () => {
             const order = await createTestOrder();
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .post("/payments")
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     order_id: order.id,
                     amount_in_cents: -1,
@@ -220,10 +189,11 @@ describe("Payment API", () => {
 
         it("should return 400 if amount_in_cents is not an integer", async () => {
             const order = await createTestOrder();
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .post("/payments")
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     order_id: order.id,
                     amount_in_cents: 12.99,
@@ -237,10 +207,11 @@ describe("Payment API", () => {
 
         it("should return 400 if payment_method is missing", async () => {
             const order = await createTestOrder();
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .post("/payments")
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     order_id: order.id,
                     amount_in_cents: 1299,
@@ -253,10 +224,11 @@ describe("Payment API", () => {
 
         it("should return 400 if payment_method is invalid", async () => {
             const order = await createTestOrder();
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .post("/payments")
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     order_id: order.id,
                     amount_in_cents: 1299,
@@ -270,10 +242,11 @@ describe("Payment API", () => {
 
         it("should return 400 if payment_status is missing", async () => {
             const order = await createTestOrder();
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .post("/payments")
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     order_id: order.id,
                     amount_in_cents: 1299,
@@ -286,10 +259,11 @@ describe("Payment API", () => {
 
         it("should return 400 if payment_status is invalid", async () => {
             const order = await createTestOrder();
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .post("/payments")
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     order_id: order.id,
                     amount_in_cents: 1299,
@@ -307,10 +281,11 @@ describe("Payment API", () => {
             const firstPayment = await createTestPayment();
 
             const secondOrder = await createTestOrder();
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const secondCreateResponse = await request(app)
                 .post("/payments")
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     order_id: secondOrder.id,
                     amount_in_cents: 2500,
@@ -322,7 +297,7 @@ describe("Payment API", () => {
 
             const response = await request(app)
                 .get("/payments")
-                .set("x-user-id", cashier.id);
+                .set(authHeader);
 
             expect(response.status).toBe(200);
             expect(response.body.payments).toBeDefined();
@@ -338,10 +313,11 @@ describe("Payment API", () => {
         });
 
         it("should return an empty array if there are no payments", async () => {
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .get("/payments")
-                .set("x-user-id", cashier.id);
+                .set(authHeader);
 
             expect(response.status).toBe(200);
             expect(response.body.payments).toBeDefined();
@@ -352,10 +328,11 @@ describe("Payment API", () => {
     describe("PATCH /payments/:id", () => {
         it("should update payment amount", async () => {
             const payment = await createTestPayment();
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .patch(`/payments/${payment.id}`)
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     amount_in_cents: 1599
                 });
@@ -368,10 +345,11 @@ describe("Payment API", () => {
 
         it("should update payment method", async () => {
             const payment = await createTestPayment();
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .patch(`/payments/${payment.id}`)
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     payment_method: "cash"
                 });
@@ -383,10 +361,11 @@ describe("Payment API", () => {
 
         it("should update payment status", async () => {
             const payment = await createTestPayment();
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .patch(`/payments/${payment.id}`)
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     payment_status: "refunded"
                 });
@@ -398,10 +377,11 @@ describe("Payment API", () => {
 
         it("should update multiple payment fields", async () => {
             const payment = await createTestPayment();
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .patch(`/payments/${payment.id}`)
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     amount_in_cents: 999,
                     payment_method: "gift_card",
@@ -416,10 +396,11 @@ describe("Payment API", () => {
         });
 
         it("should return 400 if id is not a valid UUID", async () => {
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .patch("/payments/not-a-valid-id")
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     amount_in_cents: 1599
                 });
@@ -430,10 +411,11 @@ describe("Payment API", () => {
 
         it("should return 400 if amount_in_cents is negative", async () => {
             const payment = await createTestPayment();
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .patch(`/payments/${payment.id}`)
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     amount_in_cents: -1
                 });
@@ -444,10 +426,11 @@ describe("Payment API", () => {
 
         it("should return 400 if amount_in_cents is not an integer", async () => {
             const payment = await createTestPayment();
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .patch(`/payments/${payment.id}`)
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     amount_in_cents: 12.99
                 });
@@ -458,10 +441,11 @@ describe("Payment API", () => {
 
         it("should return 400 if payment_method is invalid", async () => {
             const payment = await createTestPayment();
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .patch(`/payments/${payment.id}`)
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     payment_method: "bitcoin"
                 });
@@ -472,10 +456,11 @@ describe("Payment API", () => {
 
         it("should return 400 if payment_status is invalid", async () => {
             const payment = await createTestPayment();
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .patch(`/payments/${payment.id}`)
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     payment_status: "unknown"
                 });
@@ -486,10 +471,11 @@ describe("Payment API", () => {
 
         it("should return 400 if no valid fields are provided", async () => {
             const payment = await createTestPayment();
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .patch(`/payments/${payment.id}`)
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({});
 
             expect(response.status).toBe(400);
@@ -498,10 +484,11 @@ describe("Payment API", () => {
 
         it("should return 404 if payment does not exist", async () => {
             const fakePaymentId = "00000000-0000-0000-0000-000000000000";
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .patch(`/payments/${fakePaymentId}`)
-                .set("x-user-id", cashier.id)
+                .set(authHeader)
                 .send({
                     amount_in_cents: 1599
                 });
@@ -514,26 +501,28 @@ describe("Payment API", () => {
     describe("DELETE /payments/:id", () => {
         it("should delete a payment", async () => {
             const payment = await createTestPayment();
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const deleteResponse = await request(app)
                 .delete(`/payments/${payment.id}`)
-                .set("x-user-id", cashier.id);
+                .set(authHeader);
 
             expect(deleteResponse.status).toBe(204);
 
             const getResponse = await request(app)
                 .get("/payments")
-                .set("x-user-id", cashier.id);
+                .set(authHeader);
 
             expect(getResponse.status).toBe(200);
             expect(getResponse.body.payments).toEqual([]);
         });
 
         it("should return 400 if id is not a valid UUID", async () => {
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .delete("/payments/not-a-valid-id")
-                .set("x-user-id", cashier.id);
+                .set(authHeader);
 
             expect(response.status).toBe(400);
             expect(response.body.error).toBeDefined();
@@ -541,153 +530,154 @@ describe("Payment API", () => {
 
         it("should return 404 if payment does not exist", async () => {
             const fakePaymentId = "00000000-0000-0000-0000-000000000000";
-            const cashier = await createCashierUser();
+            const authHeader = await createCashierHeader();
+
             const response = await request(app)
                 .delete(`/payments/${fakePaymentId}`)
-                .set("x-user-id", cashier.id);
+                .set(authHeader);
 
             expect(response.status).toBe(404);
             expect(response.body.error).toBeDefined();
         });
-
     });
-});
 
-describe("Payment permissions", () => {
-    const createPaymentPayload = async () => {
-        const order = await createTestOrder();
+    describe("Payment permissions", () => {
+        const createPaymentPayload = async () => {
+            const order = await createTestOrder();
 
-        return {
-            order_id: order.id,
-            amount_in_cents: 1000,
-            payment_method: "card",
-            payment_status: "completed"
+            return {
+                order_id: order.id,
+                amount_in_cents: 1000,
+                payment_method: "card",
+                payment_status: "completed"
+            };
         };
-    };
 
-    it("should allow cashier to create a payment", async () => {
-        const cashier = await createTestUser("cashier");
-        const payload = await createPaymentPayload();
+        it("should allow cashier to create a payment", async () => {
+            const authHeader = await createCashierHeader();
+            const payload = await createPaymentPayload();
 
-        const response = await request(app)
-            .post("/payments")
-            .set("x-user-id", cashier.id)
-            .send(payload);
+            const response = await request(app)
+                .post("/payments")
+                .set(authHeader)
+                .send(payload);
 
-        expect(response.status).toBe(201);
-        expect(response.body.payment).toBeDefined();
-    });
+            expect(response.status).toBe(201);
+            expect(response.body.payment).toBeDefined();
+        });
 
-    it("should allow manager to create a payment", async () => {
-        const manager = await createTestUser("manager");
-        const payload = await createPaymentPayload();
+        it("should allow manager to create a payment", async () => {
+            const authHeader = await createManagerHeader();
+            const payload = await createPaymentPayload();
 
-        const response = await request(app)
-            .post("/payments")
-            .set("x-user-id", manager.id)
-            .send(payload);
+            const response = await request(app)
+                .post("/payments")
+                .set(authHeader)
+                .send(payload);
 
-        expect(response.status).toBe(201);
-        expect(response.body.payment).toBeDefined();
-    });
+            expect(response.status).toBe(201);
+            expect(response.body.payment).toBeDefined();
+        });
 
-    it("should allow admin to create a payment", async () => {
-        const admin = await createTestUser("admin");
-        const payload = await createPaymentPayload();
+        it("should allow admin to create a payment", async () => {
+            const authHeader = await createAdminHeader();
+            const payload = await createPaymentPayload();
 
-        const response = await request(app)
-            .post("/payments")
-            .set("x-user-id", admin.id)
-            .send(payload);
+            const response = await request(app)
+                .post("/payments")
+                .set(authHeader)
+                .send(payload);
 
-        expect(response.status).toBe(201);
-        expect(response.body.payment).toBeDefined();
-    });
+            expect(response.status).toBe(201);
+            expect(response.body.payment).toBeDefined();
+        });
 
-    it("should return 401 if x-user-id is missing", async () => {
-        const payload = await createPaymentPayload();
+        it("should return 401 if authorization header is missing", async () => {
+            const payload = await createPaymentPayload();
 
-        const response = await request(app)
-            .post("/payments")
-            .send(payload);
+            const response = await request(app)
+                .post("/payments")
+                .send(payload);
 
-        expect(response.status).toBe(401);
-        expect(response.body.error).toBeDefined();
-    });
+            expect(response.status).toBe(401);
+            expect(response.body.error).toBeDefined();
+        });
 
-    it("should return 401 if x-user-id is not a valid UUID", async () => {
-        const payload = await createPaymentPayload();
+        it("should return 401 if authorization header is malformed", async () => {
+            const payload = await createPaymentPayload();
 
-        const response = await request(app)
-            .post("/payments")
-            .set("x-user-id", "not-a-valid-id")
-            .send(payload);
+            const response = await request(app)
+                .post("/payments")
+                .set("Authorization", "NotBearer token")
+                .send(payload);
 
-        expect(response.status).toBe(401);
-        expect(response.body.error).toBeDefined();
-    });
+            expect(response.status).toBe(401);
+            expect(response.body.error).toBeDefined();
+        });
 
-    it("should return 401 if x-user-id does not exist", async () => {
-        const payload = await createPaymentPayload();
+        it("should return 401 if JWT is invalid", async () => {
+            const payload = await createPaymentPayload();
 
-        const response = await request(app)
-            .post("/payments")
-            .set("x-user-id", "00000000-0000-0000-0000-000000000000")
-            .send(payload);
+            const response = await request(app)
+                .post("/payments")
+                .set("Authorization", "Bearer invalid-token")
+                .send(payload);
 
-        expect(response.status).toBe(401);
-        expect(response.body.error).toBeDefined();
-    });
+            expect(response.status).toBe(401);
+            expect(response.body.error).toBeDefined();
+        });
 
-    it("should return 403 if server tries to create a payment", async () => {
-        const server = await createTestUser("server");
-        const payload = await createPaymentPayload();
+        it("should return 403 if server tries to create a payment", async () => {
+            const authHeader = await createJwtHeaderForRole("server");
+            const payload = await createPaymentPayload();
 
-        const response = await request(app)
-            .post("/payments")
-            .set("x-user-id", server.id)
-            .send(payload);
+            const response = await request(app)
+                .post("/payments")
+                .set(authHeader)
+                .send(payload);
 
-        expect(response.status).toBe(403);
-        expect(response.body.error).toBeDefined();
-    });
+            expect(response.status).toBe(403);
+            expect(response.body.error).toBeDefined();
+        });
 
-    it("should return 403 if kitchen tries to create a payment", async () => {
-        const kitchen = await createTestUser("kitchen");
-        const payload = await createPaymentPayload();
+        it("should return 403 if kitchen tries to create a payment", async () => {
+            const authHeader = await createJwtHeaderForRole("kitchen");
+            const payload = await createPaymentPayload();
 
-        const response = await request(app)
-            .post("/payments")
-            .set("x-user-id", kitchen.id)
-            .send(payload);
+            const response = await request(app)
+                .post("/payments")
+                .set(authHeader)
+                .send(payload);
 
-        expect(response.status).toBe(403);
-        expect(response.body.error).toBeDefined();
-    });
+            expect(response.status).toBe(403);
+            expect(response.body.error).toBeDefined();
+        });
 
-    it("should return 403 if host tries to create a payment", async () => {
-        const host = await createTestUser("host");
-        const payload = await createPaymentPayload();
+        it("should return 403 if host tries to create a payment", async () => {
+            const authHeader = await createJwtHeaderForRole("host");
+            const payload = await createPaymentPayload();
 
-        const response = await request(app)
-            .post("/payments")
-            .set("x-user-id", host.id)
-            .send(payload);
+            const response = await request(app)
+                .post("/payments")
+                .set(authHeader)
+                .send(payload);
 
-        expect(response.status).toBe(403);
-        expect(response.body.error).toBeDefined();
-    });
+            expect(response.status).toBe(403);
+            expect(response.body.error).toBeDefined();
+        });
 
-    it("should return 403 if inactive cashier tries to create a payment", async () => {
-        const inactiveCashier = await createTestUser("cashier", false);
-        const payload = await createPaymentPayload();
+        it("should return 403 if inactive cashier tries to create a payment", async () => {
+            const inactiveCashier = await createTestUserWithRole("cashier", false);
+            const token = signAuthToken(inactiveCashier.id);
+            const payload = await createPaymentPayload();
 
-        const response = await request(app)
-            .post("/payments")
-            .set("x-user-id", inactiveCashier.id)
-            .send(payload);
+            const response = await request(app)
+                .post("/payments")
+                .set("Authorization", `Bearer ${token}`)
+                .send(payload);
 
-        expect(response.status).toBe(403);
-        expect(response.body.error).toBeDefined();
+            expect(response.status).toBe(403);
+            expect(response.body.error).toBeDefined();
+        });
     });
 });

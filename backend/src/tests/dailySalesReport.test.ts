@@ -2,6 +2,12 @@ import request from "supertest";
 import { describe, it, expect, beforeEach } from "vitest";
 import app from "../app.js";
 import sql from "../db.js";
+import {
+    createCashierHeader,
+    createJwtHeaderForRole,
+    createTestUserWithRole
+} from "./helpers/auth.js";
+import { signAuthToken } from "../utils/jwt.js";
 
 describe("Daily Sales Report API", () => {
     beforeEach(async () => {
@@ -15,50 +21,6 @@ describe("Daily Sales Report API", () => {
         await sql`DELETE FROM categories`;
         await sql`DELETE FROM tables`;
     });
-
-    const createTestUser = async (
-        userRole: string,
-        isActive = true,
-        firstName = "Test"
-    ) => {
-        const result = await sql`
-            INSERT INTO users (
-                first_name,
-                middle_name,
-                last_name,
-                user_role,
-                passcode_hash,
-                is_active
-            )
-            VALUES (
-                ${firstName},
-                ${null},
-                ${"User"},
-                ${userRole}::user_role_enum,
-                ${`${userRole}-1234`},
-                ${isActive}
-            )
-            RETURNING
-                id,
-                first_name,
-                middle_name,
-                last_name,
-                user_role,
-                is_active,
-                created_at,
-                updated_at
-        `;
-
-        return result[0];
-    };
-
-    const createManagerUser = async () => {
-        return createTestUser("manager");
-    };
-
-    const createCashierUser = async () => {
-        return createTestUser("cashier");
-    };
 
     const createTestOrder = async () => {
         const response = await request(app)
@@ -78,11 +40,11 @@ describe("Daily Sales Report API", () => {
         amountInCents: number,
         paymentStatus = "completed"
     ) => {
-        const cashier = await createCashierUser();
+        const authHeader = await createCashierHeader();
 
         const response = await request(app)
             .post("/payments")
-            .set("x-user-id", cashier.id)
+            .set(authHeader)
             .send({
                 order_id: orderId,
                 amount_in_cents: amountInCents,
@@ -93,12 +55,20 @@ describe("Daily Sales Report API", () => {
         return response.body.payment;
     };
 
-    const getDailySalesAsRole = async (userRole: string, isActive = true) => {
-        const user = await createTestUser(userRole, isActive);
+    const getDailySalesAsRole = async (
+        userRole:
+            | "cashier"
+            | "server"
+            | "manager"
+            | "admin"
+            | "kitchen"
+            | "host"
+    ) => {
+        const authHeader = await createJwtHeaderForRole(userRole);
 
         return request(app)
             .get("/reports/daily-sales")
-            .set("x-user-id", user.id);
+            .set(authHeader);
     };
 
     describe("GET /reports/daily-sales", () => {
@@ -169,7 +139,7 @@ describe("Daily Sales Report API", () => {
             expect(response.body.report).toBeDefined();
         });
 
-        it("should return 401 if x-user-id is missing", async () => {
+        it("should return 401 if authorization header is missing", async () => {
             const response = await request(app)
                 .get("/reports/daily-sales");
 
@@ -177,19 +147,19 @@ describe("Daily Sales Report API", () => {
             expect(response.body.error).toBeDefined();
         });
 
-        it("should return 401 if x-user-id is not a valid UUID", async () => {
+        it("should return 401 if authorization header is malformed", async () => {
             const response = await request(app)
                 .get("/reports/daily-sales")
-                .set("x-user-id", "not-a-valid-id");
+                .set("Authorization", "NotBearer token");
 
             expect(response.status).toBe(401);
             expect(response.body.error).toBeDefined();
         });
 
-        it("should return 401 if x-user-id does not exist", async () => {
+        it("should return 401 if JWT is invalid", async () => {
             const response = await request(app)
                 .get("/reports/daily-sales")
-                .set("x-user-id", "00000000-0000-0000-0000-000000000000");
+                .set("Authorization", "Bearer invalid-token");
 
             expect(response.status).toBe(401);
             expect(response.body.error).toBeDefined();
@@ -224,7 +194,12 @@ describe("Daily Sales Report API", () => {
         });
 
         it("should return 403 if inactive manager tries to access daily sales report", async () => {
-            const response = await getDailySalesAsRole("manager", false);
+            const inactiveManager = await createTestUserWithRole("manager", false);
+            const token = signAuthToken(inactiveManager.id);
+
+            const response = await request(app)
+                .get("/reports/daily-sales")
+                .set("Authorization", `Bearer ${token}`);
 
             expect(response.status).toBe(403);
             expect(response.body.error).toBeDefined();

@@ -3,6 +3,11 @@ import request from "supertest";
 import { describe, it, expect, beforeEach } from "vitest";
 import app from "../app.js";
 import sql from "../db.js";
+import {
+    createJwtHeaderForRole,
+    createTestUserWithRole
+} from "./helpers/auth.js";
+import { signAuthToken } from "../utils/jwt.js";
 
 describe("Kitchen Orders API", () => {
     beforeEach(async () => {
@@ -27,48 +32,20 @@ describe("Kitchen Orders API", () => {
         return response.body.category;
     };
 
-    const createTestUser = async (
-        userRole: string,
-        isActive = true,
-        firstName = "Test"
+    const getKitchenOrdersAsRole = async (
+        userRole:
+            | "cashier"
+            | "server"
+            | "manager"
+            | "admin"
+            | "kitchen"
+            | "host" = "kitchen"
     ) => {
-        const result = await sql`
-            INSERT INTO users (
-                first_name,
-                middle_name,
-                last_name,
-                user_role,
-                passcode_hash,
-                is_active
-            )
-            VALUES (
-                ${firstName},
-                ${null},
-                ${"User"},
-                ${userRole}::user_role_enum,
-                ${`${userRole}-1234`},
-                ${isActive}
-            )
-            RETURNING
-                id,
-                first_name,
-                middle_name,
-                last_name,
-                user_role,
-                is_active,
-                created_at,
-                updated_at
-        `;
-
-        return result[0];
-    };
-
-    const getKitchenOrdersAsRole = async (userRole = "kitchen") => {
-        const user = await createTestUser(userRole);
+        const authHeader = await createJwtHeaderForRole(userRole);
 
         return request(app)
             .get("/kitchen/orders")
-            .set("x-user-id", user.id);
+            .set(authHeader);
     };
 
     const createTestItem = async (
@@ -394,39 +371,27 @@ describe("Kitchen Orders API", () => {
         });
 
         it("should allow kitchen user to access kitchen orders", async () => {
-            const kitchenUser = await createTestUser("kitchen");
-
-            const response = await request(app)
-                .get("/kitchen/orders")
-                .set("x-user-id", kitchenUser.id);
+            const response = await getKitchenOrdersAsRole("kitchen");
 
             expect(response.status).toBe(200);
             expect(response.body.orders).toBeDefined();
         });
 
         it("should allow manager to access kitchen orders", async () => {
-            const manager = await createTestUser("manager");
-
-            const response = await request(app)
-                .get("/kitchen/orders")
-                .set("x-user-id", manager.id);
+            const response = await getKitchenOrdersAsRole("manager");
 
             expect(response.status).toBe(200);
             expect(response.body.orders).toBeDefined();
         });
 
         it("should allow admin to access kitchen orders", async () => {
-            const admin = await createTestUser("admin");
-
-            const response = await request(app)
-                .get("/kitchen/orders")
-                .set("x-user-id", admin.id);
+            const response = await getKitchenOrdersAsRole("admin");
 
             expect(response.status).toBe(200);
             expect(response.body.orders).toBeDefined();
         });
 
-        it("should return 401 if x-user-id is missing", async () => {
+        it("should return 401 if authorization header is missing", async () => {
             const response = await request(app)
                 .get("/kitchen/orders");
 
@@ -434,63 +399,52 @@ describe("Kitchen Orders API", () => {
             expect(response.body.error).toBeDefined();
         });
 
-        it("should return 401 if x-user-id is not a valid UUID", async () => {
+        it("should return 401 if authorization header is malformed", async () => {
             const response = await request(app)
                 .get("/kitchen/orders")
-                .set("x-user-id", "not-a-valid-id");
+                .set("Authorization", "NotBearer token");
 
             expect(response.status).toBe(401);
             expect(response.body.error).toBeDefined();
         });
 
-        it("should return 401 if x-user-id does not exist", async () => {
+        it("should return 401 if JWT is invalid", async () => {
             const response = await request(app)
                 .get("/kitchen/orders")
-                .set("x-user-id", "00000000-0000-0000-0000-000000000000");
+                .set("Authorization", "Bearer invalid-token");
 
             expect(response.status).toBe(401);
             expect(response.body.error).toBeDefined();
         });
 
         it("should return 403 if cashier tries to access kitchen orders", async () => {
-            const cashier = await createTestUser("cashier");
-
-            const response = await request(app)
-                .get("/kitchen/orders")
-                .set("x-user-id", cashier.id);
+            const response = await getKitchenOrdersAsRole("cashier");
 
             expect(response.status).toBe(403);
             expect(response.body.error).toBeDefined();
         });
 
         it("should return 403 if server tries to access kitchen orders", async () => {
-            const server = await createTestUser("server");
-
-            const response = await request(app)
-                .get("/kitchen/orders")
-                .set("x-user-id", server.id);
+            const response = await getKitchenOrdersAsRole("server");
 
             expect(response.status).toBe(403);
             expect(response.body.error).toBeDefined();
         });
 
         it("should return 403 if host tries to access kitchen orders", async () => {
-            const host = await createTestUser("host");
-
-            const response = await request(app)
-                .get("/kitchen/orders")
-                .set("x-user-id", host.id);
+            const response = await getKitchenOrdersAsRole("host");
 
             expect(response.status).toBe(403);
             expect(response.body.error).toBeDefined();
         });
 
         it("should return 403 if inactive kitchen user tries to access kitchen orders", async () => {
-            const inactiveKitchenUser = await createTestUser("kitchen", false);
+            const inactiveKitchenUser = await createTestUserWithRole("kitchen", false);
+            const token = signAuthToken(inactiveKitchenUser.id);
 
             const response = await request(app)
                 .get("/kitchen/orders")
-                .set("x-user-id", inactiveKitchenUser.id);
+                .set("Authorization", `Bearer ${token}`);
 
             expect(response.status).toBe(403);
             expect(response.body.error).toBeDefined();

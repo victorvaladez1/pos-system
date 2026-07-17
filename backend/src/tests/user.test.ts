@@ -2,6 +2,10 @@ import request from "supertest";
 import { describe, it, expect, beforeEach } from "vitest";
 import app from "../app.js";
 import sql from "../db.js";
+import {
+    createAdminHeader,
+    createTestUserWithRole
+} from "./helpers/auth.js";
 
 describe("User API", () => {
     beforeEach(async () => {
@@ -55,41 +59,30 @@ describe("User API", () => {
         return result[0];
     };
 
-    const createAdminUser = async () => {
-        return createTestUser(
-            "Test",
-            null,
-            "Admin",
-            "admin",
-            "admin-passcode",
-            true
-        );
-    };
-
     const postUserAsAdmin = async (body: object) => {
-        const admin = await createAdminUser();
+        const authHeader = await createAdminHeader();
 
         return request(app)
             .post("/users")
-            .set("x-user-id", admin.id)
+            .set(authHeader)
             .send(body);
     };
 
     const patchUserAsAdmin = async (userId: string, body: object) => {
-        const admin = await createAdminUser();
+        const authHeader = await createAdminHeader();
 
         return request(app)
             .patch(`/users/${userId}`)
-            .set("x-user-id", admin.id)
+            .set(authHeader)
             .send(body);
     };
 
     const deleteUserAsAdmin = async (userId: string) => {
-        const admin = await createAdminUser();
+        const authHeader = await createAdminHeader();
 
         return request(app)
             .delete(`/users/${userId}`)
-            .set("x-user-id", admin.id);
+            .set(authHeader);
     };
 
     describe("POST /users", () => {
@@ -487,11 +480,11 @@ describe("User API", () => {
         });
 
         it("should return 400 if id is not a valid UUID", async () => {
-            const admin = await createAdminUser();
+            const authHeader = await createAdminHeader();
 
             const response = await request(app)
                 .patch("/users/not-a-valid-id")
-                .set("x-user-id", admin.id)
+                .set(authHeader)
                 .send({
                     first_name: "Updated"
                 });
@@ -645,11 +638,11 @@ describe("User API", () => {
         });
 
         it("should return 400 if id is not a valid UUID", async () => {
-            const admin = await createAdminUser();
+            const authHeader = await createAdminHeader();
 
             const response = await request(app)
                 .delete("/users/not-a-valid-id")
-                .set("x-user-id", admin.id);
+                .set(authHeader);
 
             expect(response.status).toBe(400);
             expect(response.body.error).toBeDefined();
