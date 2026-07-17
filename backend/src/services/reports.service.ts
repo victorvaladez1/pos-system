@@ -122,4 +122,4 @@ export const getOpenBalancesReport = async (): Promise<OpenBalanceReport[]> => {
     `;
 
     return result;
-};  
+};
