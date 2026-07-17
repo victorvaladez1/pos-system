@@ -2,6 +2,10 @@ import request from "supertest";
 import { describe, it, expect, beforeEach } from "vitest";
 import app from "../app.js";
 import sql from "../db.js";
+import {
+    createCashierHeader,
+    createXUserIdHeaderForRole
+} from "./helpers/auth.js";
 
 describe("Payment Methods Report API", () => {
     beforeEach(async () => {
@@ -15,46 +19,6 @@ describe("Payment Methods Report API", () => {
         await sql`DELETE FROM categories`;
         await sql`DELETE FROM tables`;
     });
-
-    const createTestUser = async (
-        userRole: string,
-        isActive = true,
-        firstName = "Test"
-    ) => {
-        const result = await sql`
-            INSERT INTO users (
-                first_name,
-                middle_name,
-                last_name,
-                user_role,
-                passcode_hash,
-                is_active
-            )
-            VALUES (
-                ${firstName},
-                ${null},
-                ${"User"},
-                ${userRole}::user_role_enum,
-                ${`${userRole}-1234`},
-                ${isActive}
-            )
-            RETURNING
-                id,
-                first_name,
-                middle_name,
-                last_name,
-                user_role,
-                is_active,
-                created_at,
-                updated_at
-        `;
-
-        return result[0];
-    };
-
-    const createCashierUser = async () => {
-        return createTestUser("cashier");
-    };
 
     const createTestOrder = async () => {
         const response = await request(app)
@@ -75,11 +39,11 @@ describe("Payment Methods Report API", () => {
         paymentMethod = "card",
         paymentStatus = "completed"
     ) => {
-        const cashier = await createCashierUser();
+        const authHeader = await createCashierHeader();
 
         const response = await request(app)
             .post("/payments")
-            .set("x-user-id", cashier.id)
+            .set(authHeader)
             .send({
                 order_id: orderId,
                 amount_in_cents: amountInCents,
@@ -91,14 +55,20 @@ describe("Payment Methods Report API", () => {
     };
 
     const getPaymentMethodsReportAsRole = async (
-        userRole: string,
+        userRole:
+            | "cashier"
+            | "server"
+            | "manager"
+            | "admin"
+            | "kitchen"
+            | "host",
         isActive = true
     ) => {
-        const user = await createTestUser(userRole, isActive);
+        const authHeader = await createXUserIdHeaderForRole(userRole, isActive);
 
         return request(app)
             .get("/reports/payment-methods")
-            .set("x-user-id", user.id);
+            .set(authHeader);
     };
 
     describe("GET /reports/payment-methods", () => {

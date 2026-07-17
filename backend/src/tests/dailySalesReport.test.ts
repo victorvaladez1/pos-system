@@ -2,6 +2,10 @@ import request from "supertest";
 import { describe, it, expect, beforeEach } from "vitest";
 import app from "../app.js";
 import sql from "../db.js";
+import {
+    createCashierHeader,
+    createXUserIdHeaderForRole
+} from "./helpers/auth.js";
 
 describe("Daily Sales Report API", () => {
     beforeEach(async () => {
@@ -15,50 +19,6 @@ describe("Daily Sales Report API", () => {
         await sql`DELETE FROM categories`;
         await sql`DELETE FROM tables`;
     });
-
-    const createTestUser = async (
-        userRole: string,
-        isActive = true,
-        firstName = "Test"
-    ) => {
-        const result = await sql`
-            INSERT INTO users (
-                first_name,
-                middle_name,
-                last_name,
-                user_role,
-                passcode_hash,
-                is_active
-            )
-            VALUES (
-                ${firstName},
-                ${null},
-                ${"User"},
-                ${userRole}::user_role_enum,
-                ${`${userRole}-1234`},
-                ${isActive}
-            )
-            RETURNING
-                id,
-                first_name,
-                middle_name,
-                last_name,
-                user_role,
-                is_active,
-                created_at,
-                updated_at
-        `;
-
-        return result[0];
-    };
-
-    const createManagerUser = async () => {
-        return createTestUser("manager");
-    };
-
-    const createCashierUser = async () => {
-        return createTestUser("cashier");
-    };
 
     const createTestOrder = async () => {
         const response = await request(app)
@@ -78,11 +38,11 @@ describe("Daily Sales Report API", () => {
         amountInCents: number,
         paymentStatus = "completed"
     ) => {
-        const cashier = await createCashierUser();
+        const authHeader = await createCashierHeader();
 
         const response = await request(app)
             .post("/payments")
-            .set("x-user-id", cashier.id)
+            .set(authHeader)
             .send({
                 order_id: orderId,
                 amount_in_cents: amountInCents,
@@ -93,12 +53,21 @@ describe("Daily Sales Report API", () => {
         return response.body.payment;
     };
 
-    const getDailySalesAsRole = async (userRole: string, isActive = true) => {
-        const user = await createTestUser(userRole, isActive);
+    const getDailySalesAsRole = async (
+        userRole:
+            | "cashier"
+            | "server"
+            | "manager"
+            | "admin"
+            | "kitchen"
+            | "host",
+        isActive = true
+    ) => {
+        const authHeader = await createXUserIdHeaderForRole(userRole, isActive);
 
         return request(app)
             .get("/reports/daily-sales")
-            .set("x-user-id", user.id);
+            .set(authHeader);
     };
 
     describe("GET /reports/daily-sales", () => {
