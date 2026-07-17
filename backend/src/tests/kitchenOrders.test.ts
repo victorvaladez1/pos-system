@@ -27,6 +27,50 @@ describe("Kitchen Orders API", () => {
         return response.body.category;
     };
 
+    const createTestUser = async (
+        userRole: string,
+        isActive = true,
+        firstName = "Test"
+    ) => {
+        const result = await sql`
+            INSERT INTO users (
+                first_name,
+                middle_name,
+                last_name,
+                user_role,
+                passcode_hash,
+                is_active
+            )
+            VALUES (
+                ${firstName},
+                ${null},
+                ${"User"},
+                ${userRole}::user_role_enum,
+                ${`${userRole}-1234`},
+                ${isActive}
+            )
+            RETURNING
+                id,
+                first_name,
+                middle_name,
+                last_name,
+                user_role,
+                is_active,
+                created_at,
+                updated_at
+        `;
+
+        return result[0];
+    };
+
+    const getKitchenOrdersAsRole = async (userRole = "kitchen") => {
+        const user = await createTestUser(userRole);
+
+        return request(app)
+            .get("/kitchen/orders")
+            .set("x-user-id", user.id);
+    };
+
     const createTestItem = async (
         name = `Item ${crypto.randomUUID()}`,
         priceInCents = 1000
@@ -127,8 +171,7 @@ describe("Kitchen Orders API", () => {
                 item.price_in_cents
             );
 
-            const response = await request(app)
-                .get("/kitchen/orders");
+            const response = await getKitchenOrdersAsRole();
 
             expect(response.status).toBe(200);
             expect(response.body.orders).toBeDefined();
@@ -160,8 +203,7 @@ describe("Kitchen Orders API", () => {
                 item.price_in_cents
             );
 
-            const response = await request(app)
-                .get("/kitchen/orders");
+            const response = await getKitchenOrdersAsRole();
 
             expect(response.status).toBe(200);
             expect(response.body.orders).toHaveLength(1);
@@ -183,8 +225,7 @@ describe("Kitchen Orders API", () => {
                 item.price_in_cents
             );
 
-            const response = await request(app)
-                .get("/kitchen/orders");
+            const response = await getKitchenOrdersAsRole();
 
             expect(response.status).toBe(200);
             expect(response.body.orders).toEqual([]);
@@ -203,8 +244,7 @@ describe("Kitchen Orders API", () => {
                 item.price_in_cents
             );
 
-            const response = await request(app)
-                .get("/kitchen/orders");
+            const response = await getKitchenOrdersAsRole();
 
             expect(response.status).toBe(200);
             expect(response.body.orders).toEqual([]);
@@ -223,8 +263,7 @@ describe("Kitchen Orders API", () => {
                 item.price_in_cents
             );
 
-            const response = await request(app)
-                .get("/kitchen/orders");
+            const response = await getKitchenOrdersAsRole();
 
             expect(response.status).toBe(200);
             expect(response.body.orders).toEqual([]);
@@ -265,8 +304,7 @@ describe("Kitchen Orders API", () => {
                 tacos.price_in_cents
             );
 
-            const response = await request(app)
-                .get("/kitchen/orders");
+            const response = await getKitchenOrdersAsRole();
 
             expect(response.status).toBe(200);
             expect(response.body.orders).toHaveLength(2);
@@ -303,8 +341,7 @@ describe("Kitchen Orders API", () => {
                 2
             );
 
-            const response = await request(app)
-                .get("/kitchen/orders");
+            const response = await getKitchenOrdersAsRole();
 
             expect(response.status).toBe(200);
             expect(response.body.orders).toHaveLength(1);
@@ -320,8 +357,7 @@ describe("Kitchen Orders API", () => {
         });
 
         it("should return an empty array if there are no kitchen items", async () => {
-            const response = await request(app)
-                .get("/kitchen/orders");
+            const response = await getKitchenOrdersAsRole();
 
             expect(response.status).toBe(200);
             expect(response.body.orders).toBeDefined();
@@ -341,8 +377,7 @@ describe("Kitchen Orders API", () => {
                 item.price_in_cents
             );
 
-            const response = await request(app)
-                .get("/kitchen/orders");
+            const response = await getKitchenOrdersAsRole();
 
             expect(response.status).toBe(200);
             expect(response.body.orders).toHaveLength(1);
@@ -356,6 +391,109 @@ describe("Kitchen Orders API", () => {
 
             expect(response.body.orders[0].opened_at).toBeDefined();
             expect(response.body.orders[0].items).toBeDefined();
+        });
+
+        it("should allow kitchen user to access kitchen orders", async () => {
+            const kitchenUser = await createTestUser("kitchen");
+
+            const response = await request(app)
+                .get("/kitchen/orders")
+                .set("x-user-id", kitchenUser.id);
+
+            expect(response.status).toBe(200);
+            expect(response.body.orders).toBeDefined();
+        });
+
+        it("should allow manager to access kitchen orders", async () => {
+            const manager = await createTestUser("manager");
+
+            const response = await request(app)
+                .get("/kitchen/orders")
+                .set("x-user-id", manager.id);
+
+            expect(response.status).toBe(200);
+            expect(response.body.orders).toBeDefined();
+        });
+
+        it("should allow admin to access kitchen orders", async () => {
+            const admin = await createTestUser("admin");
+
+            const response = await request(app)
+                .get("/kitchen/orders")
+                .set("x-user-id", admin.id);
+
+            expect(response.status).toBe(200);
+            expect(response.body.orders).toBeDefined();
+        });
+
+        it("should return 401 if x-user-id is missing", async () => {
+            const response = await request(app)
+                .get("/kitchen/orders");
+
+            expect(response.status).toBe(401);
+            expect(response.body.error).toBeDefined();
+        });
+
+        it("should return 401 if x-user-id is not a valid UUID", async () => {
+            const response = await request(app)
+                .get("/kitchen/orders")
+                .set("x-user-id", "not-a-valid-id");
+
+            expect(response.status).toBe(401);
+            expect(response.body.error).toBeDefined();
+        });
+
+        it("should return 401 if x-user-id does not exist", async () => {
+            const response = await request(app)
+                .get("/kitchen/orders")
+                .set("x-user-id", "00000000-0000-0000-0000-000000000000");
+
+            expect(response.status).toBe(401);
+            expect(response.body.error).toBeDefined();
+        });
+
+        it("should return 403 if cashier tries to access kitchen orders", async () => {
+            const cashier = await createTestUser("cashier");
+
+            const response = await request(app)
+                .get("/kitchen/orders")
+                .set("x-user-id", cashier.id);
+
+            expect(response.status).toBe(403);
+            expect(response.body.error).toBeDefined();
+        });
+
+        it("should return 403 if server tries to access kitchen orders", async () => {
+            const server = await createTestUser("server");
+
+            const response = await request(app)
+                .get("/kitchen/orders")
+                .set("x-user-id", server.id);
+
+            expect(response.status).toBe(403);
+            expect(response.body.error).toBeDefined();
+        });
+
+        it("should return 403 if host tries to access kitchen orders", async () => {
+            const host = await createTestUser("host");
+
+            const response = await request(app)
+                .get("/kitchen/orders")
+                .set("x-user-id", host.id);
+
+            expect(response.status).toBe(403);
+            expect(response.body.error).toBeDefined();
+        });
+
+        it("should return 403 if inactive kitchen user tries to access kitchen orders", async () => {
+            const inactiveKitchenUser = await createTestUser("kitchen", false);
+
+            const response = await request(app)
+                .get("/kitchen/orders")
+                .set("x-user-id", inactiveKitchenUser.id);
+
+            expect(response.status).toBe(403);
+            expect(response.body.error).toBeDefined();
         });
     });
 });
