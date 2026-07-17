@@ -1,3 +1,5 @@
+import request from "supertest";
+import app from "../../app.js";
 import sql from "../../db.js";
 
 export type TestUserRole =
@@ -8,11 +10,27 @@ export type TestUserRole =
     | "kitchen"
     | "host";
 
+type TestUser = {
+    id: string;
+    first_name: string;
+    middle_name: string | null;
+    last_name: string;
+    user_role: TestUserRole;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+};
+
+type TestUserWithPasscode = TestUser & {
+    passcode: string;
+};
+
 export const createTestUserWithRole = async (
     userRole: TestUserRole,
-    isActive = true
-) => {
-    const result = await sql`
+    isActive = true,
+    passcode = `${userRole}-passcode`
+): Promise<TestUserWithPasscode> => {
+    const result = await sql<TestUser[]>`
         INSERT INTO users (
             first_name,
             middle_name,
@@ -26,7 +44,7 @@ export const createTestUserWithRole = async (
             ${null},
             ${userRole},
             ${userRole}::user_role_enum,
-            ${`${userRole}-passcode`},
+            ${passcode},
             ${isActive}
         )
         RETURNING
@@ -40,7 +58,27 @@ export const createTestUserWithRole = async (
             updated_at
     `;
 
-    return result[0];
+    return {
+        ...result[0],
+        passcode
+    };
+};
+
+export const createJwtHeaderForRole = async (
+    userRole: TestUserRole,
+    isActive = true
+) => {
+    const user = await createTestUserWithRole(userRole, isActive);
+
+    const response = await request(app)
+        .post("/auth/passcode-login")
+        .send({
+            passcode: user.passcode
+        });
+
+    return {
+        Authorization: `Bearer ${response.body.token}`
+    };
 };
 
 export const createXUserIdHeaderForRole = async (
@@ -55,17 +93,17 @@ export const createXUserIdHeaderForRole = async (
 };
 
 export const createAdminHeader = async () => {
-    return createXUserIdHeaderForRole("admin");
+    return createJwtHeaderForRole("admin");
 };
 
 export const createManagerHeader = async () => {
-    return createXUserIdHeaderForRole("manager");
+    return createJwtHeaderForRole("manager");
 };
 
 export const createCashierHeader = async () => {
-    return createXUserIdHeaderForRole("cashier");
+    return createJwtHeaderForRole("cashier");
 };
 
 export const createKitchenHeader = async () => {
-    return createXUserIdHeaderForRole("kitchen");
+    return createJwtHeaderForRole("kitchen");
 };
