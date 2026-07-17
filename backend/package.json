@@ -7,7 +7,8 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "test": "vitest run --no-file-parallelism",
-    "seed": "tsx src/scripts/seed.ts"
+    "seed": "tsx src/scripts/seed.ts",
+    "seed:demo-users": "tsx src/scripts/seedDemoUsers.ts"
   },
   "keywords": [],
   "author": "",
