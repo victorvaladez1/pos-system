@@ -7,8 +7,10 @@ import sql from "../db.js";
 describe("Order Item Modifier API", () => {
     beforeEach(async () => {
         await sql`DELETE FROM order_item_modifiers`;
+        await sql`DELETE FROM payments`;
         await sql`DELETE FROM order_items`;
         await sql`DELETE FROM orders`;
+        await sql`DELETE FROM users`;
         await sql`DELETE FROM items`;
         await sql`DELETE FROM modifiers`;
         await sql`DELETE FROM categories`;

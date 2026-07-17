@@ -1,13 +1,17 @@
 import { Request, Response } from "express";
 import { validate as isUuid }  from "uuid";
-import type { CreateTableRequest, UpdateTableRequest } from "../types/table.types.js";
-import { isTableStatus } from "../types/table.types.js";
+import type { CreateTableRequest, UpdateTableRequest, TableStatus } from "../types/table.types.js";
+import { isTableStatus, tableStatusEnum } from "../types/table.types.js";
 import {
     createTableRow,
     getTableRows,
     updateTableRowById,
-    deleteTableRowById
+    deleteTableRowById,
+    updateTableStatusById,
+    getTableRowById,
 } from "../services/tables.service.js";
+
+import { getOpenOrderRowByTableId } from "../services/orders.service.js";
 
 export const createTable = async (req: Request, res: Response) => {
     const { table_number, capacity, current_status } = req.body ?? {};
@@ -128,3 +132,56 @@ export const deleteTable = async (req: Request, res: Response) => {
         return res.status(500).json({ error: "Failed to delete table row in db." });
     }
 }
+
+export const updateTableStatus = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { current_status } = req.body;
+
+    if (!id || typeof id !== "string" || !isUuid(id) || Array.isArray(id)) {
+        return res.status(400).json({ error: "Table id must be valid UUID." });
+    }
+
+    if (!current_status || typeof current_status !== "string" || !tableStatusEnum.includes(current_status as TableStatus)) {
+        return res.status(400).json({ error: "Table status must be valid." });
+    }
+
+    try {
+        const table = await updateTableStatusById(id, current_status as TableStatus);
+
+        if (!table) {
+            return res.status(404).json({ error: "Table not found." });
+        }
+
+        return res.status(200).json({ table });
+    } catch (error) {
+        console.error("Failed to update table status.", error);
+        return res.status(500).json({ error: "Failed to update table status." });
+    }
+};
+
+export const getTableOpenOrder = async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    if (!id || typeof id !== "string" || !isUuid(id) || Array.isArray(id)) {
+        return res.status(400).json({ error: "Table id must be a valid UUID." });
+    }
+
+    try {
+        const table = await getTableRowById(id);
+
+        if (!table) {
+            return res.status(404).json({ error: "Table not found." });
+        }
+
+        const order = await getOpenOrderRowByTableId(id);
+
+        if (!order) {
+            return res.status(404).json({ error: "Open order not found for table." });
+        }
+
+        return res.status(200).json({ order });
+    } catch (error) {
+        console.error("Failed to retrieve table open order.", error);
+        return res.status(500).json({ error: "Failed to retrieve open order."});
+    }
+};

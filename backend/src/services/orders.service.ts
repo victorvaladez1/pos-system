@@ -63,3 +63,18 @@ export const cancelOrderRowById = async (orderId: string): Promise<Order | undef
 
     return result[0];
 };
+
+export const getOpenOrderRowByTableId = async (
+    tableId: string
+): Promise<Order | undefined> => {
+    const result = await sql<Order[]>`
+        SELECT *
+        FROM orders
+        WHERE table_id = ${tableId}
+            AND order_status IN ('open', 'submitted')
+        ORDER BY opened_at DESC
+        LIMIT 1
+    `;
+
+    return result[0];
+}

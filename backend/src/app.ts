@@ -11,6 +11,8 @@ import userRoutes from "./routes/users.routes.js";
 import orderItemRoutes from "./routes/orderItems.routes.js";
 import orderItemModifierRoutes from "./routes/orderItemModifiers.routes.js";
 import paymentsRoutes from "./routes/payments.routes.js";
+import kitchenRoutes from "./routes/kitchen.routes.js";
+import authRoutes from "./routes/auth.routes.js";
 
 const app = express();
 
@@ -28,5 +30,7 @@ app.use("/users", userRoutes);
 app.use("/order-items", orderItemRoutes);
 app.use("/order-item-modifiers", orderItemModifierRoutes);
 app.use("/payments", paymentsRoutes);
+app.use("/kitchen", kitchenRoutes);
+app.use("/auth", authRoutes);
 
 export default app;

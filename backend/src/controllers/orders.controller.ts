@@ -10,9 +10,16 @@ import {
     deleteOrderRowById,
     closeOrderRowById,
     getOpenOrderRows,
-    cancelOrderRowById
+    cancelOrderRowById,
+    getOpenOrderRowByTableId
 } from "../services/orders.service.js";
+
 import { getOrderSummarybyId } from "../services/orderSummary.service.js";
+
+import {
+    getTableRowById,
+    updateTableStatusById,
+} from "../services/tables.service.js";
 
 export const createOrder = async (req: Request, res: Response) => {
     const { table_id, server_id, order_type, order_status, ticket_name, guest_count, opened_at } = req.body ?? {};
@@ -71,7 +78,24 @@ export const createOrder = async (req: Request, res: Response) => {
     }
 
     try {
+        if (order_type === "dine_in" && table_id) {
+            const table = await getTableRowById(table_id);
+
+            if (!table) {
+                return res.status(404).json({ error: "Table not found." });
+            }
+
+            if (table.current_status !== "available" && table.current_status !== "reserved") {
+                return res.status(400).json({ error: "Table is not available for dine-in order." });
+            }
+        }
+
         const order = await createOrderRow(fields);
+
+        if (order.order_type === "dine_in" && order.table_id) {
+            await updateTableStatusById(order.table_id, "occupied");
+        }
+
         return res.status(201).json({ order });
 
     } catch(error: any) {
@@ -257,6 +281,10 @@ export const closeOrder = async (req: Request, res: Response) => {
             return res.status(404).json({ error: "Order not found." });
         }
 
+        if (order.order_type === "dine_in" && order.table_id) {
+            await updateTableStatusById(order.table_id, "dirty");
+        }
+
         return res.status(200).json({ order });
     } catch (error) {
         console.error("Failed to close order.", error);
@@ -307,10 +335,13 @@ export const cancelOrder = async (req: Request, res: Response) => {
             return res.status(404).json({ error: "Order not found" });
         }
 
+        if (order.order_type === "dine_in" && order.table_id) {
+            await updateTableStatusById(order.table_id, "dirty");
+        }
+ 
         return res.status(200).json({ order });
     } catch (error) {
         console.error("Failed to cancel order.", error);
         return res.status(500).json({ error: "Faild to cancel order." });
     }
-
 };  
