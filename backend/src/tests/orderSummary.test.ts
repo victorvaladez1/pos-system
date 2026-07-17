@@ -108,13 +108,40 @@ describe("Order Summary API", () => {
         return response.body.orderItemModifier;
     };
 
+    const createTestCashier = async () => {
+        const result = await sql`
+            INSERT INTO users (
+                first_name,
+                middle_name,
+                last_name,
+                user_role,
+                passcode_hash,
+                is_active
+            )
+            VALUES (
+                ${"Test"},
+                ${null},
+                ${"Cashier"},
+                ${"cashier"}::user_role_enum,
+                ${"1234"},
+                ${true}
+            )
+            RETURNING id
+        `;
+
+        return result[0];
+    };
+
     const createTestPayment = async (
         orderId: string,
         amountInCents: number,
         paymentStatus = "completed"
     ) => {
+        const cashier = await createTestCashier();
+
         const response = await request(app)
             .post("/payments")
+            .set("x-user-id", cashier.id)
             .send({
                 order_id: orderId,
                 amount_in_cents: amountInCents,

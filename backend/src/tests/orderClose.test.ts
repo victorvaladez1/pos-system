@@ -17,6 +17,30 @@ describe("Order Close API", () => {
         await sql`DELETE FROM tables`;
     });
 
+    const createTestCashier = async () => {
+        const result = await sql`
+            INSERT INTO users (
+                first_name,
+                middle_name,
+                last_name,
+                user_role,
+                passcode_hash,
+                is_active
+            )
+            VALUES (
+                ${"Test"},
+                ${null},
+                ${"Cashier"},
+                ${"cashier"}::user_role_enum,
+                ${"1234"},
+                ${true}
+            )
+            RETURNING id
+        `;
+
+        return result[0];
+    };
+
     const createTestCategory = async () => {
         const response = await request(app)
             .post("/categories")
@@ -113,8 +137,11 @@ describe("Order Close API", () => {
         amountInCents: number,
         paymentStatus = "completed"
     ) => {
+        const cashier = await createTestCashier();
+
         const response = await request(app)
             .post("/payments")
+            .set("x-user-id", cashier.id)
             .send({
                 order_id: orderId,
                 amount_in_cents: amountInCents,

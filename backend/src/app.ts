@@ -13,6 +13,7 @@ import orderItemModifierRoutes from "./routes/orderItemModifiers.routes.js";
 import paymentsRoutes from "./routes/payments.routes.js";
 import kitchenRoutes from "./routes/kitchen.routes.js";
 import authRoutes from "./routes/auth.routes.js";
+import reportRoutes from "./routes/reports.routes.js";
 
 const app = express();
 
@@ -32,5 +33,6 @@ app.use("/order-item-modifiers", orderItemModifierRoutes);
 app.use("/payments", paymentsRoutes);
 app.use("/kitchen", kitchenRoutes);
 app.use("/auth", authRoutes);
+app.use("/reports", reportRoutes);
 
 export default app;
