@@ -3,6 +3,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import app from "../app.js";
 import sql from "../db.js";
 import { hashPasscode } from "../utils/passcode.js";
+import { createTestUserWithRole } from "./helpers/auth.js";
+import { signAuthToken } from "../utils/jwt.js";
 
 describe("Auth API", () => {
     beforeEach(async () => {
@@ -173,5 +175,61 @@ describe("Auth API", () => {
             expect(response.body.token).toBeDefined();
             expect(typeof response.body.token).toBe("string");
         });
+    });
+});
+
+describe("GET /auth/me", () => {
+    it("should return the current user with a valid JWT", async () => {
+        const user = await createTestUserWithRole("manager");
+        const token = signAuthToken(user.id);
+
+        const response = await request(app)
+            .get("/auth/me")
+            .set("Authorization", `Bearer ${token}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.user).toBeDefined();
+        expect(response.body.user.id).toBe(user.id);
+        expect(response.body.user.first_name).toBe(user.first_name);
+        expect(response.body.user.last_name).toBe(user.last_name);
+        expect(response.body.user.user_role).toBe("manager");
+        expect(response.body.user.passcode_hash).toBeUndefined();
+    });
+
+    it("should return 401 if authorization header is missing", async () => {
+        const response = await request(app)
+            .get("/auth/me");
+
+        expect(response.status).toBe(401);
+        expect(response.body.error).toBeDefined();
+    });
+
+    it("should return 401 if authorization header is malformed", async () => {
+        const response = await request(app)
+            .get("/auth/me")
+            .set("Authorization", "Bad token");
+
+        expect(response.status).toBe(401);
+        expect(response.body.error).toBeDefined();
+    });
+
+    it("should return 401 if JWT is invalid", async () => {
+        const response = await request(app)
+            .get("/auth/me")
+            .set("Authorization", "Bearer invalid-token");
+
+        expect(response.status).toBe(401);
+        expect(response.body.error).toBeDefined();
+    });
+
+    it("should return 401 if JWT belongs to a user that does not exist", async () => {
+        const token = signAuthToken("00000000-0000-0000-0000-000000000000");
+
+        const response = await request(app)
+            .get("/auth/me")
+            .set("Authorization", `Bearer ${token}`);
+
+        expect(response.status).toBe(401);
+        expect(response.body.error).toBeDefined();
     });
 });
