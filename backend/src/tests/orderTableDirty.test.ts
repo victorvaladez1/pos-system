@@ -3,6 +3,7 @@ import request from "supertest";
 import { describe, it, expect, beforeEach } from "vitest";
 import app from "../app.js";
 import sql from "../db.js";
+import { createCashierHeader } from "./helpers/auth.js";
 
 describe("Order Table Dirty API", () => {
     beforeEach(async () => {
@@ -131,11 +132,11 @@ describe("Order Table Dirty API", () => {
         orderId: string,
         amountInCents: number
     ) => {
-        const cashier = await createTestCashier();
+        const authHeader = await createCashierHeader();
 
         const response = await request(app)
             .post("/payments")
-            .set("x-user-id", cashier.id)
+            .set(authHeader)
             .send({
                 order_id: orderId,
                 amount_in_cents: amountInCents,
