@@ -4,10 +4,11 @@ import app from "../app.js";
 import sql from "../db.js";
 import {
     createAdminHeader,
+    createJwtHeaderForRole,
     createManagerHeader,
-    createXUserIdHeaderForRole,
     createTestUserWithRole
 } from "./helpers/auth.js";
+import { signAuthToken } from "../utils/jwt.js";
 
 describe("Permissions API", () => {
     beforeEach(async () => {
@@ -58,7 +59,7 @@ describe("Permissions API", () => {
             expect(response.body.user.first_name).toBe("New");
         });
 
-        it("should return 401 if x-user-id is missing when creating a user", async () => {
+        it("should return 401 if authorization header is missing when creating a user", async () => {
             const response = await request(app)
                 .post("/users")
                 .send(createUserPayload);
@@ -67,20 +68,20 @@ describe("Permissions API", () => {
             expect(response.body.error).toBeDefined();
         });
 
-        it("should return 401 if x-user-id is not a valid UUID", async () => {
+        it("should return 401 if authorization header is malformed", async () => {
             const response = await request(app)
                 .post("/users")
-                .set("x-user-id", "not-a-valid-id")
+                .set("Authorization", "NotBearer token")
                 .send(createUserPayload);
 
             expect(response.status).toBe(401);
             expect(response.body.error).toBeDefined();
         });
 
-        it("should return 401 if x-user-id does not exist", async () => {
+        it("should return 401 if JWT is invalid", async () => {
             const response = await request(app)
                 .post("/users")
-                .set("x-user-id", "00000000-0000-0000-0000-000000000000")
+                .set("Authorization", "Bearer invalid-token")
                 .send(createUserPayload);
 
             expect(response.status).toBe(401);
@@ -88,7 +89,7 @@ describe("Permissions API", () => {
         });
 
         it("should return 403 if cashier tries to create a user", async () => {
-            const authHeader = await createXUserIdHeaderForRole("cashier");
+            const authHeader = await createJwtHeaderForRole("cashier");
 
             const response = await request(app)
                 .post("/users")
@@ -100,7 +101,7 @@ describe("Permissions API", () => {
         });
 
         it("should return 403 if server tries to create a user", async () => {
-            const authHeader = await createXUserIdHeaderForRole("server");
+            const authHeader = await createJwtHeaderForRole("server");
 
             const response = await request(app)
                 .post("/users")
@@ -112,7 +113,7 @@ describe("Permissions API", () => {
         });
 
         it("should return 403 if kitchen tries to create a user", async () => {
-            const authHeader = await createXUserIdHeaderForRole("kitchen");
+            const authHeader = await createJwtHeaderForRole("kitchen");
 
             const response = await request(app)
                 .post("/users")
@@ -124,7 +125,7 @@ describe("Permissions API", () => {
         });
 
         it("should return 403 if host tries to create a user", async () => {
-            const authHeader = await createXUserIdHeaderForRole("host");
+            const authHeader = await createJwtHeaderForRole("host");
 
             const response = await request(app)
                 .post("/users")
@@ -136,11 +137,12 @@ describe("Permissions API", () => {
         });
 
         it("should return 403 if inactive manager tries to create a user", async () => {
-            const authHeader = await createXUserIdHeaderForRole("manager", false);
+            const inactiveManager = await createTestUserWithRole("manager", false);
+            const token = signAuthToken(inactiveManager.id);
 
             const response = await request(app)
                 .post("/users")
-                .set(authHeader)
+                .set("Authorization", `Bearer ${token}`)
                 .send(createUserPayload);
 
             expect(response.status).toBe(403);
@@ -163,7 +165,7 @@ describe("Permissions API", () => {
         });
 
         it("should return 403 if server tries to update a user", async () => {
-            const authHeader = await createXUserIdHeaderForRole("server");
+            const authHeader = await createJwtHeaderForRole("server");
             const employee = await createTestUserWithRole("cashier");
 
             const response = await request(app)
@@ -190,7 +192,7 @@ describe("Permissions API", () => {
         });
 
         it("should return 403 if cashier tries to deactivate a user", async () => {
-            const authHeader = await createXUserIdHeaderForRole("cashier");
+            const authHeader = await createJwtHeaderForRole("cashier");
             const employee = await createTestUserWithRole("server");
 
             const response = await request(app)

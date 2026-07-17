@@ -3,7 +3,11 @@ import request from "supertest";
 import { describe, it, expect, beforeEach } from "vitest";
 import app from "../app.js";
 import sql from "../db.js";
-import { createXUserIdHeaderForRole } from "./helpers/auth.js";
+import {
+    createJwtHeaderForRole,
+    createTestUserWithRole
+} from "./helpers/auth.js";
+import { signAuthToken } from "../utils/jwt.js";
 
 describe("Kitchen Orders API", () => {
     beforeEach(async () => {
@@ -35,10 +39,9 @@ describe("Kitchen Orders API", () => {
             | "manager"
             | "admin"
             | "kitchen"
-            | "host" = "kitchen",
-        isActive = true
+            | "host" = "kitchen"
     ) => {
-        const authHeader = await createXUserIdHeaderForRole(userRole, isActive);
+        const authHeader = await createJwtHeaderForRole(userRole);
 
         return request(app)
             .get("/kitchen/orders")
@@ -388,7 +391,7 @@ describe("Kitchen Orders API", () => {
             expect(response.body.orders).toBeDefined();
         });
 
-        it("should return 401 if x-user-id is missing", async () => {
+        it("should return 401 if authorization header is missing", async () => {
             const response = await request(app)
                 .get("/kitchen/orders");
 
@@ -396,19 +399,19 @@ describe("Kitchen Orders API", () => {
             expect(response.body.error).toBeDefined();
         });
 
-        it("should return 401 if x-user-id is not a valid UUID", async () => {
+        it("should return 401 if authorization header is malformed", async () => {
             const response = await request(app)
                 .get("/kitchen/orders")
-                .set("x-user-id", "not-a-valid-id");
+                .set("Authorization", "NotBearer token");
 
             expect(response.status).toBe(401);
             expect(response.body.error).toBeDefined();
         });
 
-        it("should return 401 if x-user-id does not exist", async () => {
+        it("should return 401 if JWT is invalid", async () => {
             const response = await request(app)
                 .get("/kitchen/orders")
-                .set("x-user-id", "00000000-0000-0000-0000-000000000000");
+                .set("Authorization", "Bearer invalid-token");
 
             expect(response.status).toBe(401);
             expect(response.body.error).toBeDefined();
@@ -436,7 +439,12 @@ describe("Kitchen Orders API", () => {
         });
 
         it("should return 403 if inactive kitchen user tries to access kitchen orders", async () => {
-            const response = await getKitchenOrdersAsRole("kitchen", false);
+            const inactiveKitchenUser = await createTestUserWithRole("kitchen", false);
+            const token = signAuthToken(inactiveKitchenUser.id);
+
+            const response = await request(app)
+                .get("/kitchen/orders")
+                .set("Authorization", `Bearer ${token}`);
 
             expect(response.status).toBe(403);
             expect(response.body.error).toBeDefined();

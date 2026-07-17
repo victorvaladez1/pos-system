@@ -4,8 +4,10 @@ import app from "../app.js";
 import sql from "../db.js";
 import {
     createCashierHeader,
-    createXUserIdHeaderForRole
+    createJwtHeaderForRole,
+    createTestUserWithRole
 } from "./helpers/auth.js";
+import { signAuthToken } from "../utils/jwt.js";
 
 describe("Daily Sales Report API", () => {
     beforeEach(async () => {
@@ -60,10 +62,9 @@ describe("Daily Sales Report API", () => {
             | "manager"
             | "admin"
             | "kitchen"
-            | "host",
-        isActive = true
+            | "host"
     ) => {
-        const authHeader = await createXUserIdHeaderForRole(userRole, isActive);
+        const authHeader = await createJwtHeaderForRole(userRole);
 
         return request(app)
             .get("/reports/daily-sales")
@@ -138,7 +139,7 @@ describe("Daily Sales Report API", () => {
             expect(response.body.report).toBeDefined();
         });
 
-        it("should return 401 if x-user-id is missing", async () => {
+        it("should return 401 if authorization header is missing", async () => {
             const response = await request(app)
                 .get("/reports/daily-sales");
 
@@ -146,19 +147,19 @@ describe("Daily Sales Report API", () => {
             expect(response.body.error).toBeDefined();
         });
 
-        it("should return 401 if x-user-id is not a valid UUID", async () => {
+        it("should return 401 if authorization header is malformed", async () => {
             const response = await request(app)
                 .get("/reports/daily-sales")
-                .set("x-user-id", "not-a-valid-id");
+                .set("Authorization", "NotBearer token");
 
             expect(response.status).toBe(401);
             expect(response.body.error).toBeDefined();
         });
 
-        it("should return 401 if x-user-id does not exist", async () => {
+        it("should return 401 if JWT is invalid", async () => {
             const response = await request(app)
                 .get("/reports/daily-sales")
-                .set("x-user-id", "00000000-0000-0000-0000-000000000000");
+                .set("Authorization", "Bearer invalid-token");
 
             expect(response.status).toBe(401);
             expect(response.body.error).toBeDefined();
@@ -193,7 +194,12 @@ describe("Daily Sales Report API", () => {
         });
 
         it("should return 403 if inactive manager tries to access daily sales report", async () => {
-            const response = await getDailySalesAsRole("manager", false);
+            const inactiveManager = await createTestUserWithRole("manager", false);
+            const token = signAuthToken(inactiveManager.id);
+
+            const response = await request(app)
+                .get("/reports/daily-sales")
+                .set("Authorization", `Bearer ${token}`);
 
             expect(response.status).toBe(403);
             expect(response.body.error).toBeDefined();
