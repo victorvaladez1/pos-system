@@ -61,3 +61,13 @@ export const deactivateUserRowById = async (
 
     return result[0];
 };
+
+export const getUserRowById = async (userId: string): Promise<User | undefined> => {
+    const result = await sql<User[]>`
+        SELECT *
+        FROM users
+        WHERE id = ${userId}
+    `;
+
+    return result[0];
+};
