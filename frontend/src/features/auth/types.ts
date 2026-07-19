@@ -9,9 +9,9 @@ export type UserRole =
 export type AuthUser = {
     id: string;
     first_name: string;
-    middle_name: string;
+    middle_name: string | null;
     last_name: string;
-    user_role: string;
+    user_role: UserRole;
     user_name: string;
     is_active: boolean;
     created_at: string;
