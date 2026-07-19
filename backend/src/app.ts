@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 
 import healthRoutes from "./routes/health.routes.js";
 import timeRoutes from "./routes/time.routes.js";
@@ -16,6 +17,10 @@ import authRoutes from "./routes/auth.routes.js";
 import reportRoutes from "./routes/reports.routes.js";
 
 const app = express();
+
+app.use(cors({
+    origin: "http://localhost:5173"
+}));
 
 app.use(express.json());
 
