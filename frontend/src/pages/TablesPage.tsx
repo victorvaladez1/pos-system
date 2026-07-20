@@ -41,6 +41,17 @@ export const TablesPage = () => {
         loadTables();
     }, [token]);
 
+    if (isLoading) {
+        return (
+            <section>
+                <h2 className="text-2xl font-bold">Tables</h2>
+                <p className="mt-2 rounded-lg border border-red-900/70 bg-red-950/50 px-4 py-3 text-sm text-red-200">
+                    {error}
+                </p>
+            </section>
+        );
+    }
+
     if (error) {
         return (
             <section>
