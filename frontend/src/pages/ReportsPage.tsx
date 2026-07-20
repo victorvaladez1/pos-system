@@ -189,6 +189,45 @@ export const ReportsPage = () => {
                         </div>
                     )}
                 </article>
+
+                <article className="rounded-xl border border-slate-800 bg-slate-900">
+                    <div className="border-b border-slate-800 px-5 py-4">
+                        <h3 className="font-semibold">Top Items</h3>
+                    </div>
+
+                    {topItems.length === 0 ? (
+                        <p className="p-5 text-sm text-slate-400">
+                            No top item data found.
+                        </p>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full border-collapse text-left text-sm">
+                                <thead className="bg-slate-950/60 text-slate-300">
+                                    <tr>
+                                        <th className="px-5 py-3 font-medium">Item</th>
+                                        <th className="px-5 py-3 font-medium">Qty</th>
+                                        <th className="px-5 py-3 font-medium">Sales</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-800">
+                                    {topItems.map((item) => (
+                                        <tr key={item.item_id}>
+                                            <td className="px-5 py-3 text-slate-200">
+                                                {item.item_name}
+                                            </td>
+                                            <td className="px-5 py-3 text-slate-400">
+                                                {item.quantity_sold}
+                                            </td>
+                                            <td className="px-5 py-3 text-slate-300">
+                                                {formatCurrency(item.gross_sales_in_cents)}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>      
+                        </div>
+                    )}
+                </article>
             </div>
 
             <article className="mt-6 rounded-xl border border-slate-800 bg-slate-900">
