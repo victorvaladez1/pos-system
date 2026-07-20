@@ -82,7 +82,7 @@ export const KitchenPage = () => {
                     {orders.map((order) => (
                         <article
                             key={order.order_id}
-                            className="overflow-hidden rounded-xl border border-slate-800 bg-slate-800 bg-slate-900 shadow-sm"
+                            className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-sm"
                         >
                             <div className="border-b border-slate-800 bg-slate-950/60 px-5 py-4">
                                 <div className="flex flex-wrap items-start justify-between gap-3">
